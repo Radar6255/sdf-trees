@@ -1,6 +1,7 @@
 #include "glad/glad.h"
 #include "UseImGui.h"
 #include "GLFW/glfw3.h"
+#include "engine/ShaderCode.h"
 
 #include <GL/gl.h>
 #include <iostream>
@@ -43,6 +44,10 @@ int main() {
 
     myimgui.Init(window, glsl_version);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+    ShaderCode t("./shaders/fragShader.glsl");
+    t.createShader(GL_FRAGMENT_SHADER);
+
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT);
@@ -51,6 +56,7 @@ int main() {
         myimgui.Render();
 
         // TODO In here is where I can start writing any OpenGL code that I want to be able able to render the game
+
         glfwSwapBuffers(window);
     }
     myimgui.Shutdown();

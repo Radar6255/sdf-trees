@@ -1,0 +1,6 @@
+.cache/
+.sessions/
+CMakeCache.txt
+CMakeFiles/
+build/
+imgui.ini
