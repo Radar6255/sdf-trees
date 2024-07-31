@@ -7,6 +7,44 @@
 #include <iostream>
 #include <ostream>
 
+#define RENDER_DATA_BUFFERS 1
+
+void GLAPIENTRY
+MessageCallback( GLenum source,
+                 GLenum type,
+                 GLuint id,
+                 GLenum severity,
+                 GLsizei length,
+                 const GLchar* message,
+                 const void* userParam )
+{
+    fprintf( stderr, "----OpenGL %s message = %s\n",
+           ( type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "status" ),
+             message );
+
+    // On error we want to find the current stack trace so we can figure out what is the cause
+//    if (type == GL_DEBUG_TYPE_ERROR){
+//        // Print the current stack trace. Taken from https://stackoverflow.com/questions/105659/how-can-one-grab-a-stack-trace-in-c
+//        void* callstack[128];
+//        int frames = backtrace(callstack, 128);
+//        char** strs = backtrace_symbols(callstack, frames);
+//        for (int i = 0; i < frames; i++){
+//            fprintf(stderr, "%s\n", strs[i]);
+//        }
+//        free(strs);
+//    }
+}
+
+static float rectPoints[6][3] = {
+    {-0.5f, -0.5f, 1.0f},
+    {0.5f, -0.5f, 1.0f},
+    {-0.5f, 0.5f, 1.0f},
+    {0.5f, -0.5f, 1.0f},
+    {0.5f, 0.5f, 1.0f},
+    {-0.5f, 0.5f, 1.0f}
+};
+
+
 int main() {
     std::cout << "Starting game!\n";
 
@@ -43,14 +81,65 @@ int main() {
     UseImGui myimgui;
 
     myimgui.Init(window, glsl_version);
+
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(MessageCallback, NULL);
+
+
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-    ShaderCode t("./shaders/fragShader.glsl");
-    t.createShader(GL_FRAGMENT_SHADER);
+    ShaderCode *t = new ShaderCode("./shaders/fragShader.glsl");
+    GLuint fragShader = t->createShader(GL_FRAGMENT_SHADER);
+    delete t;
+    ShaderCode *a = new ShaderCode("./shaders/vertShader.glsl");
+    GLuint vertShader = a->createShader(GL_VERTEX_SHADER);
+    delete a;
+
+    std::cout << "Creating OpenGL program..." << std::endl;
+
+    GLuint program = glCreateProgram();
+    glAttachShader(program, fragShader);
+    glAttachShader(program, vertShader);
+
+    glLinkProgram(program);
+
+    glDetachShader(program, fragShader);
+    glDetachShader(program, vertShader);
+    glDeleteShader(fragShader);
+    glDeleteShader(vertShader);
+
+    glUseProgram(program);
+
+    GLint params;
+    glGetProgramiv(program, GL_LINK_STATUS, &params);
+
+    std::cout << "Program linked " << (params == GL_TRUE ? "Success" : "Failed") << "!" << std::endl;
+    // TODO Handle when program fails to link
+    //
+    GLuint *buffers = (GLuint *) malloc(sizeof(GLuint *) * RENDER_DATA_BUFFERS);
+    /*glCreateBuffers(RENDER_DATA_BUFFERS, buffers);*/
+
+    glGenBuffers(RENDER_DATA_BUFFERS, buffers);
+
+
+    glBindVertexArray(buffers[0]);
+
+    // Dealing with verticies
+    glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
+    glBufferData(GL_ARRAY_BUFFER, 6 * 3 * sizeof(float), rectPoints, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
+    glEnableVertexAttribArray(0);
+
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT);
+
+        // TODO Render square over screen here
+        glBindVertexArray(buffers[0]);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
 
         myimgui.Update();
         myimgui.Render();

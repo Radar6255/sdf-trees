@@ -5,8 +5,9 @@
 
 class ShaderCode {
 public:
-    ShaderCode(const char* filename);
-    GLuint createShader(GLenum shaderType);
+  ShaderCode(const char *filename);
+  GLuint createShader(GLenum shaderType);
+
 private:
-    std::string code;
+  std::string code;
 };
