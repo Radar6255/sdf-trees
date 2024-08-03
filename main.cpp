@@ -2,6 +2,7 @@
 #include "UseImGui.h"
 #include "GLFW/glfw3.h"
 #include "engine/ShaderCode.h"
+#include "engine/Program.h"
 
 #include <GL/gl.h>
 #include <iostream>
@@ -85,37 +86,13 @@ int main() {
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(MessageCallback, NULL);
 
+    Program *program = new Program("./shaders/fragShader.glsl", "./shaders/vertShader.glsl");
+    glUseProgram(program->program);
 
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    // TODO See if this is needed
+    glEnable(GL_DEPTH_TEST);
 
-    ShaderCode *t = new ShaderCode("./shaders/fragShader.glsl");
-    GLuint fragShader = t->createShader(GL_FRAGMENT_SHADER);
-    delete t;
-    ShaderCode *a = new ShaderCode("./shaders/vertShader.glsl");
-    GLuint vertShader = a->createShader(GL_VERTEX_SHADER);
-    delete a;
-
-    std::cout << "Creating OpenGL program..." << std::endl;
-
-    GLuint program = glCreateProgram();
-    glAttachShader(program, fragShader);
-    glAttachShader(program, vertShader);
-
-    glLinkProgram(program);
-
-    glDetachShader(program, fragShader);
-    glDetachShader(program, vertShader);
-    glDeleteShader(fragShader);
-    glDeleteShader(vertShader);
-
-    glUseProgram(program);
-
-    GLint params;
-    glGetProgramiv(program, GL_LINK_STATUS, &params);
-
-    std::cout << "Program linked " << (params == GL_TRUE ? "Success" : "Failed") << "!" << std::endl;
-    // TODO Handle when program fails to link
-    //
+    // Start VAO creation, this should happen in the object that we are trying to render
     GLuint *buffers = (GLuint *) malloc(sizeof(GLuint *) * RENDER_DATA_BUFFERS);
     /*glCreateBuffers(RENDER_DATA_BUFFERS, buffers);*/
     GLuint VAO;
@@ -129,8 +106,13 @@ int main() {
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
     glBufferData(GL_ARRAY_BUFFER, 6 * 3 * sizeof(float), rectPoints, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
     glEnableVertexAttribArray(0);
+
+    // Clearing globals
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+    // End VAO creation
 
 
     while (!glfwWindowShouldClose(window)) {
@@ -139,7 +121,7 @@ int main() {
 
         // TODO Render square over screen here
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
         myimgui.Update();

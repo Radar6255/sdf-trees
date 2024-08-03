@@ -13,6 +13,7 @@ void UseImGui::Init(GLFWwindow* window, const char* glsl_version) {
     ImGui_ImplOpenGL3_Init(glsl_version);
     ImGui::StyleColorsDark();
 }
+
 void UseImGui::Update() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
