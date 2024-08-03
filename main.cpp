@@ -118,17 +118,18 @@ int main() {
     //
     GLuint *buffers = (GLuint *) malloc(sizeof(GLuint *) * RENDER_DATA_BUFFERS);
     /*glCreateBuffers(RENDER_DATA_BUFFERS, buffers);*/
+    GLuint VAO;
+
+    glGenVertexArrays(1, &VAO);
+    glBindVertexArray(VAO);
 
     glGenBuffers(RENDER_DATA_BUFFERS, buffers);
-
-
-    glBindVertexArray(buffers[0]);
 
     // Dealing with verticies
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
     glBufferData(GL_ARRAY_BUFFER, 6 * 3 * sizeof(float), rectPoints, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
     glEnableVertexAttribArray(0);
 
 
@@ -137,7 +138,7 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // TODO Render square over screen here
-        glBindVertexArray(buffers[0]);
+        glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
 
