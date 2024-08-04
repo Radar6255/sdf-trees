@@ -3,6 +3,7 @@
 #include "GLFW/glfw3.h"
 #include "engine/ShaderCode.h"
 #include "engine/Program.h"
+#include "World/Cube.h"
 
 #include <GL/gl.h>
 #include <iostream>
@@ -90,44 +91,20 @@ int main() {
     glUseProgram(program->program);
 
     // TODO See if this is needed
-    glEnable(GL_DEPTH_TEST);
+    // Can't be used when testing currently
+    /*glEnable(GL_DEPTH_TEST);*/
 
-    // Start VAO creation, this should happen in the object that we are trying to render
-    GLuint *buffers = (GLuint *) malloc(sizeof(GLuint *) * RENDER_DATA_BUFFERS);
-    /*glCreateBuffers(RENDER_DATA_BUFFERS, buffers);*/
-    GLuint VAO;
-
-    glGenVertexArrays(1, &VAO);
-    glBindVertexArray(VAO);
-
-    glGenBuffers(RENDER_DATA_BUFFERS, buffers);
-
-    // Dealing with verticies
-    glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
-    glBufferData(GL_ARRAY_BUFFER, 6 * 3 * sizeof(float), rectPoints, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
-    glEnableVertexAttribArray(0);
-
-    // Clearing globals
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-    // End VAO creation
-
+    Cube *cube = new Cube();
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // TODO Render square over screen here
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
+        cube->Render();
 
         myimgui.Update();
         myimgui.Render();
 
-        // TODO In here is where I can start writing any OpenGL code that I want to be able able to render the game
 
         glfwSwapBuffers(window);
     }

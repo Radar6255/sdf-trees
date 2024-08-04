@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.8)
 project("DimensionShooter")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_executable (imGUIexample "main.cpp" "UseImGui.cpp" "UseImGui.h" "./engine/ShaderCode.h" "./engine/ShaderCode.cpp" "./engine/Program.cpp" "./engine/Program.h")
+add_executable (imGUIexample "main.cpp" "UseImGui.cpp" "UseImGui.h" "./engine/ShaderCode.h" "./engine/ShaderCode.cpp" "./engine/Program.cpp" "./engine/Program.h" "./World/Cube.h" "./World/Cube.cpp")
 
 find_package(glfw3 CONFIG REQUIRED)
 target_link_libraries(imGUIexample PRIVATE glfw)
