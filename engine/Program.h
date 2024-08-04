@@ -1,4 +1,7 @@
+#pragma once
+
 #include <GL/gl.h>
+
 class Program {
 public:
     Program(const char* fragShader, const char* vertShader);

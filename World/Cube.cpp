@@ -1,19 +1,24 @@
 #include "Cube.h"
 #include <GL/gl.h>
 #include <cstdlib>
-#include <iostream>
 
 #define RENDER_DATA_BUFFERS 1
 #define NUM_POINTS 24
 
 static float rectPoints[24][3] = {
     // Front face
-    {-0.5f, -0.5f, 0.5f},
-    {0.5f, -0.5f, 0.5f},
-    {-0.5f, 0.5f, 0.5f},
-    {0.5f, -0.5f, 0.5f},
-    {0.5f, 0.5f, 0.5f},
-    {-0.5f, 0.5f, 0.5f},
+    /*{-0.5f, -0.5f, 0.5f},*/
+    /*{0.5f, -0.5f, 0.5f},*/
+    /*{-0.5f, 0.5f, 0.5f},*/
+    /*{0.5f, -0.5f, 0.5f},*/
+    /*{0.5f, 0.5f, 0.5f},*/
+    /*{-0.5f, 0.5f, 0.5f},*/
+    {-0.5f, -0.5f, 0.0f},
+    {0.5f, -0.5f, 0.0f},
+    {-0.5f, 0.5f, 0.0f},
+    {0.5f, -0.5f, 0.0f},
+    {0.5f, 0.5f, 0.0f},
+    {-0.5f, 0.5f, 0.0f},
     // Back face
     {-0.5f, -0.5f, -0.5f},
     {0.5f, -0.5f, -0.5f},

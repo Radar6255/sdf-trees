@@ -4,6 +4,7 @@
 #include "engine/ShaderCode.h"
 #include "engine/Program.h"
 #include "World/Cube.h"
+#include "engine/Camera.h"
 
 #include <GL/gl.h>
 #include <iostream>
@@ -95,9 +96,11 @@ int main() {
     /*glEnable(GL_DEPTH_TEST);*/
 
     Cube *cube = new Cube();
+    Camera cam = Camera(program);
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+        cam.Update(window);
         glClear(GL_COLOR_BUFFER_BIT);
 
         cube->Render();
