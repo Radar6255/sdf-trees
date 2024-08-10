@@ -47,6 +47,13 @@ static float rectPoints[6][3] = {
     {-0.5f, 0.5f, 1.0f}
 };
 
+// This is the camera, defined here so that we can handle keypresses
+Camera *cam;
+
+// Register anything that requires keypresses here
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    cam->HandleKeypress(window, key, scancode, action, mods);
+}
 
 int main() {
     std::cout << "Starting game!\n";
@@ -96,11 +103,15 @@ int main() {
     /*glEnable(GL_DEPTH_TEST);*/
 
     Cube *cube = new Cube();
-    Camera cam = Camera(program);
+    cam = new Camera(program);
+
+    // Registering key callbacks to handle input
+    // Register in the key_callback function
+    glfwSetKeyCallback(window, key_callback);
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
-        cam.Update(window);
+        cam->Update(window);
         glClear(GL_COLOR_BUFFER_BIT);
 
         cube->Render();

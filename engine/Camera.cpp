@@ -8,21 +8,26 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/trigonometric.hpp>
+#include <iostream>
 
 Camera::Camera(Program* program) {
     this->modelLoc = glGetUniformLocation(program->program, "model");
     this->viewLoc = glGetUniformLocation(program->program, "view");
     this->perspectiveLoc = glGetUniformLocation(program->program, "projection");
+
+    this->pos = glm::vec3(0.0f, 0.0f, -3.0f);
 }
 
 // This function is to update the transformation matricies
 void Camera::Update(GLFWwindow* window) {
+    // TODO Some of these matricies don't need to be updated every frame!
     // Setting up model matrix
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
     glm::mat4 view = glm::mat4(1.0f);
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+    // This is the position of the camera
+    view = glm::translate(view, this->pos);
 
     // Need to get the current size of the window
     // TODO Refactor so this is grabbed only on update
@@ -35,4 +40,16 @@ void Camera::Update(GLFWwindow* window) {
     glUniformMatrix4fv(this->modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(this->viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(this->perspectiveLoc, 1, GL_FALSE, glm::value_ptr(proj));
+}
+
+// TODO Need to save the state of the current keys or use the glfwGetKey function
+
+// TODO Eventually this should move out of the camera and into more of a player class
+// That is for later though
+void Camera::HandleKeypress(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if (key == GLFW_KEY_W && action == GLFW_PRESS) {
+        // TODO Here we want to toggle forward movement
+        std::cout << "Updating position!" << std::endl;
+        this->pos.x += 0.02;
+    }
 }
