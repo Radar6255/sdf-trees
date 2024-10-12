@@ -3,9 +3,9 @@
 #include <cstdlib>
 
 #define RENDER_DATA_BUFFERS 1
-#define NUM_POINTS 24
+#define NUM_POINTS 30
 
-static float rectPoints[24][3] = {
+static float rectPoints[NUM_POINTS][3] = {
     // Front face
     /*{-0.5f, -0.5f, 0.5f},*/
     /*{0.5f, -0.5f, 0.5f},*/
@@ -42,6 +42,12 @@ static float rectPoints[24][3] = {
     {-0.5f, -0.5f, 0.5f},
 
     // TODO Do the other sides here
+    {0.5f, -1.5f, 0.5f},
+    {0.5f, -1.5f, -0.5f},
+    {-0.5f, -1.5f, 0.5f},
+    {-0.5f, -1.5f, -0.5f},
+    {0.5f, -1.5f, -0.5f},
+    {-0.5f, -1.5f, 0.5f},
 };
 
 Cube::Cube() {

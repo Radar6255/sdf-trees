@@ -18,6 +18,12 @@ target_link_libraries(imGUIexample PRIVATE imgui::imgui)
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(imGUIexample PRIVATE glm::glm)
 
+find_package(unofficial-noise CONFIG REQUIRED)
+target_link_libraries(imGUIexample PRIVATE unofficial::noise::noise-static)
+
+find_package(unofficial-noiseutils CONFIG REQUIRED)
+target_link_libraries(imGUIexample PRIVATE unofficial::noiseutils::noiseutils-static)
+
 # Or use the header-only version
 # find_package(glm CONFIG REQUIRED)
 # target_link_libraries(main PRIVATE glm::glm-header-only)

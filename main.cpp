@@ -4,6 +4,7 @@
 #include "engine/ShaderCode.h"
 #include "engine/Program.h"
 #include "World/Cube.h"
+#include "World/Terrain.h"
 #include "engine/Camera.h"
 
 #include <GL/gl.h>
@@ -55,6 +56,11 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     cam->HandleKeypress(window, key, scancode, action, mods);
 }
 
+// Register anything that requires keypresses here
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+    cam->HandleMouseMovement(window, xpos, ypos);
+}
+
 int main() {
     std::cout << "Starting game!\n";
 
@@ -103,18 +109,22 @@ int main() {
     /*glEnable(GL_DEPTH_TEST);*/
 
     Cube *cube = new Cube();
+    Terrain *terrain = new Terrain();
     cam = new Camera(program);
 
     // Registering key callbacks to handle input
     // Register in the key_callback function
     glfwSetKeyCallback(window, key_callback);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         cam->Update(window);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        cube->Render();
+        /*cube->Render();*/
+        terrain->Render();
 
         myimgui.Update();
         myimgui.Render();

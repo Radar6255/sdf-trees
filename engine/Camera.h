@@ -10,9 +10,23 @@ public:
 
     // This function is to update the transformation matricies
     void Update(GLFWwindow* window);
+    void Tick();
 
     void HandleKeypress(GLFWwindow* window, int key, int scancode, int action, int mods);
+    void HandleMouseMovement(GLFWwindow* window, double xpos, double ypos);
 private:
     int modelLoc, perspectiveLoc, viewLoc;
     glm::vec3 pos;
+    glm::vec3 cameraFront;
+
+    float xrot;
+    float yrot;
+
+    bool w = false;
+    bool a = false;
+    bool s = false;
+    bool d = false;
+
+    bool up = false;
+    bool down = false;
 };
