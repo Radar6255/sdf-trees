@@ -1,5 +1,6 @@
 #pragma once
 
+#include "World/Terrain.h"
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -8,7 +9,7 @@
 class UseImGui {
 public:
   void Init(GLFWwindow* window, const char* glsl_version);
-  virtual void Update();
+  virtual void Update(Terrain* terrain);
   void Render();
   void Shutdown();
 };

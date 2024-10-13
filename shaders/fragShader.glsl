@@ -3,6 +3,7 @@ precision mediump float;
 
 // Color that is the result of this shader
 out vec4 fragColor;
+in vec3 norm;
 
 // uniform sampler2D tex0;
 
@@ -13,7 +14,9 @@ void main() {
     // vec3 color = vec3(0.8, 0.2, 0.2);
     // fragColor = vec4(dot(normalize(outLightDir), outNorm) * color, 1.0);
     // fragColor = vec4(outLightDir, 1.0);
-    fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+
+    // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    fragColor = vec4(normalize(norm), 1.0);
 
     // fragColor = texture(tex0, uvFrag);
 }

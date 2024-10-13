@@ -2,6 +2,8 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
+#include <iostream>
+#include <ostream>
 
 void UseImGui::Init(GLFWwindow* window, const char* glsl_version) {
     IMGUI_CHECKVERSION();
@@ -14,7 +16,7 @@ void UseImGui::Init(GLFWwindow* window, const char* glsl_version) {
     ImGui::StyleColorsDark();
 }
 
-void UseImGui::Update() {
+void UseImGui::Update(Terrain* terrain) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -23,11 +25,13 @@ void UseImGui::Update() {
 
     ImGui::Begin("Test");
     ImGui::Text("Magic here");
+    ImGui::SliderFloat("alterSize", &terrain->alterSize, -0.2f, 0.2f);
     ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-    
+
     /*bool clear_color_changed = ImGui::ColorEdit3("clear color", (float*) clear_color)*/
     ImGui::End();
 }
+
 void UseImGui::Render() {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

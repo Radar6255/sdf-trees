@@ -43,7 +43,7 @@ void Camera::Update(GLFWwindow* window) {
     if (yrot < -89.0f) {
         yrot = -89.0f;
     }
-    std::cout << "xrot: " << this->xrot << ", yrot: " << this->yrot << std::endl;
+    /*std::cout << "xrot: " << this->xrot << ", yrot: " << this->yrot << std::endl;*/
 
     glm::vec3 direction;
     direction.x = cos(glm::radians(xrot)) * cos(glm::radians(yrot));
@@ -64,7 +64,7 @@ void Camera::Update(GLFWwindow* window) {
     glfwGetWindowSize(window, &width, &height);
 
     // Setting up perspective matrix
-    glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+    glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
 
     glUniformMatrix4fv(this->modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(this->viewLoc, 1, GL_FALSE, glm::value_ptr(view));
@@ -72,6 +72,8 @@ void Camera::Update(GLFWwindow* window) {
 }
 
 // TODO Need to save the state of the current keys or use the glfwGetKey function
+
+bool focus = true;
 
 // TODO Eventually this should move out of the camera and into more of a player class
 // That is for later though
@@ -121,6 +123,17 @@ void Camera::HandleKeypress(GLFWwindow* window, int key, int scancode, int actio
             down = false;
         }
     }
+    if (key == GLFW_KEY_ESCAPE) {
+        if (action == GLFW_PRESS) {
+            if (focus) {
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                focus = false;
+            } else {
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                focus = true;
+            }
+        }
+    }
 }
 
 void Camera::Tick() {
@@ -150,6 +163,9 @@ void Camera::Tick() {
         this->pos -= 0.1f * glm::vec3(0.0f, 1.0f, 0.0f);
     }
 }
+
+double lastXPos = 0;
+double lastYPos = 0;
 
 void Camera::HandleMouseMovement(GLFWwindow* window, double xpos, double ypos) {
     this->xrot = xpos / 100.0;

@@ -8,8 +8,11 @@
 #include "engine/Camera.h"
 
 #include <GL/gl.h>
+#include <atomic>
+#include <imgui_impl_glfw.h>
 #include <iostream>
 #include <ostream>
+#include <thread>
 
 #define RENDER_DATA_BUFFERS 1
 
@@ -58,8 +61,15 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 // Register anything that requires keypresses here
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+    ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
     cam->HandleMouseMovement(window, xpos, ypos);
 }
+
+/*void terrainUpdate(Terrain* terrain) {*/
+/*    terrain->UpdateTerrain();*/
+/*    std::cout << "Finished updating terrain mesh\n";*/
+/*    updatedTerrain = true;*/
+/*}*/
 
 int main() {
     std::cout << "Starting game!\n";
@@ -104,9 +114,7 @@ int main() {
     Program *program = new Program("./shaders/fragShader.glsl", "./shaders/vertShader.glsl");
     glUseProgram(program->program);
 
-    // TODO See if this is needed
-    // Can't be used when testing currently
-    /*glEnable(GL_DEPTH_TEST);*/
+    glEnable(GL_DEPTH_TEST);
 
     Cube *cube = new Cube();
     Terrain *terrain = new Terrain();
@@ -117,16 +125,42 @@ int main() {
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    std::thread t1;
+    int iter = 0;
+    std::atomic<bool> updatedTerrain(true);
+    int updates = 0;
+
 
     while (!glfwWindowShouldClose(window)) {
+        if (updatedTerrain) {
+            // TODO Here I want to update the buffer
+            if (iter) {
+                t1.join();
+            }
+
+            // This update is to update the buffer
+            std::cout << "Updates per second: " << updates / glfwGetTime() << std::endl;
+            terrain->Update();
+
+            updatedTerrain = false;
+            // Here we are updating the mesh that we made
+            t1 = std::thread([&updatedTerrain, &terrain] {
+                terrain->UpdateTerrain();
+                /*std::cout << "Updated terrain mesh!" << std::endl;*/
+                updatedTerrain = true;
+            });
+            updates++;
+        }
+        iter++;
+
         glfwPollEvents();
         cam->Update(window);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         /*cube->Render();*/
         terrain->Render();
 
-        myimgui.Update();
+        myimgui.Update(terrain);
         myimgui.Render();
 
 
