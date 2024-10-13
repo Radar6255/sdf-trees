@@ -9,7 +9,7 @@
 class UseImGui {
 public:
   void Init(GLFWwindow* window, const char* glsl_version);
-  virtual void Update(Terrain* terrain);
+  virtual void Update(Terrain* terrain, bool* updateTerrain);
   void Render();
   void Shutdown();
 };

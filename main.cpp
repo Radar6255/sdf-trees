@@ -6,6 +6,7 @@
 #include "World/Cube.h"
 #include "World/Terrain.h"
 #include "engine/Camera.h"
+#include "GameState.h"
 
 #include <GL/gl.h>
 #include <atomic>
@@ -62,17 +63,14 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 // Register anything that requires keypresses here
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+
     cam->HandleMouseMovement(window, xpos, ypos);
 }
 
-/*void terrainUpdate(Terrain* terrain) {*/
-/*    terrain->UpdateTerrain();*/
-/*    std::cout << "Finished updating terrain mesh\n";*/
-/*    updatedTerrain = true;*/
-/*}*/
-
 int main() {
     std::cout << "Starting game!\n";
+
+    GameState state;
 
     if (!glfwInit()) {
         std::cerr << "Failed to initalize GLFW!\n";
@@ -117,22 +115,23 @@ int main() {
     glEnable(GL_DEPTH_TEST);
 
     Cube *cube = new Cube();
-    Terrain *terrain = new Terrain();
-    cam = new Camera(program);
+    Terrain *terrain = new Terrain(&state);
+    cam = new Camera(program, &state);
 
     // Registering key callbacks to handle input
     // Register in the key_callback function
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
     std::thread t1;
     int iter = 0;
     std::atomic<bool> updatedTerrain(true);
     int updates = 0;
-
+    bool updateTerrain = true;
 
     while (!glfwWindowShouldClose(window)) {
-        if (updatedTerrain) {
+        if (updateTerrain && updatedTerrain) {
             // TODO Here I want to update the buffer
             if (iter) {
                 t1.join();
@@ -160,7 +159,7 @@ int main() {
         /*cube->Render();*/
         terrain->Render();
 
-        myimgui.Update(terrain);
+        myimgui.Update(terrain, &updateTerrain);
         myimgui.Render();
 
 

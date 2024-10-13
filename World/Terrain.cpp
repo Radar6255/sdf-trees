@@ -9,7 +9,8 @@ void printPoint(float* array){
     std::cout << "(" << array[0] << ", " << array[1] << ", " << array[2] << ")";
 }
 
-Terrain::Terrain() {
+Terrain::Terrain(GameState* state) {
+    this->state =state;
     this->alter = 0.0f;
 
     this->UpdateTerrain();

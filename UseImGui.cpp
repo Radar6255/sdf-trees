@@ -16,7 +16,7 @@ void UseImGui::Init(GLFWwindow* window, const char* glsl_version) {
     ImGui::StyleColorsDark();
 }
 
-void UseImGui::Update(Terrain* terrain) {
+void UseImGui::Update(Terrain* terrain, bool* updateTerrain) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -27,6 +27,8 @@ void UseImGui::Update(Terrain* terrain) {
     ImGui::Text("Magic here");
     ImGui::SliderFloat("alterSize", &terrain->alterSize, -0.2f, 0.2f);
     ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+
+    ImGui::Checkbox("Update Terrain", updateTerrain);
 
     /*bool clear_color_changed = ImGui::ColorEdit3("clear color", (float*) clear_color)*/
     ImGui::End();

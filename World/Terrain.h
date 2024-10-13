@@ -9,6 +9,7 @@
 #define NUM_POINTS TERRAIN_WIDTH * TERRAIN_LENGTH * 2 * 3
 
 #include "glad/glad.h"
+#include "../GameState.h"
 #include <glm/ext/vector_float3.hpp>
 
 class Vertex {
@@ -19,7 +20,7 @@ public:
 
 class Terrain {
 public:
-    Terrain();
+    Terrain(GameState* state);
     void Render();
     void Update();
     void UpdateTerrain();
@@ -30,4 +31,5 @@ private:
     Vertex terrainHeightMap[NUM_POINTS];
     GLuint *buffers;
     float alter;
+    GameState* state;
 };

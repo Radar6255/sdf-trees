@@ -14,7 +14,8 @@
 #include <iostream>
 #include <ostream>
 
-Camera::Camera(Program* program) {
+Camera::Camera(Program* program, GameState* state) {
+    this->state = state;
     this->modelLoc = glGetUniformLocation(program->program, "model");
     this->viewLoc = glGetUniformLocation(program->program, "view");
     this->perspectiveLoc = glGetUniformLocation(program->program, "projection");
@@ -71,10 +72,6 @@ void Camera::Update(GLFWwindow* window) {
     glUniformMatrix4fv(this->perspectiveLoc, 1, GL_FALSE, glm::value_ptr(proj));
 }
 
-// TODO Need to save the state of the current keys or use the glfwGetKey function
-
-bool focus = true;
-
 // TODO Eventually this should move out of the camera and into more of a player class
 // That is for later though
 void Camera::HandleKeypress(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -125,19 +122,21 @@ void Camera::HandleKeypress(GLFWwindow* window, int key, int scancode, int actio
     }
     if (key == GLFW_KEY_ESCAPE) {
         if (action == GLFW_PRESS) {
-            if (focus) {
+            if (!this->state->paused) {
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-                focus = false;
+                this->state->paused = true;
             } else {
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                focus = true;
+                this->state->paused = false;
             }
+
         }
     }
 }
 
 void Camera::Tick() {
     if (w) {
+        // TODO Make this only apply in the x, z planes
         this->pos += 0.1f * cameraFront;
     }
 
@@ -146,20 +145,18 @@ void Camera::Tick() {
     }
 
     if (d) {
-        // TODO Here we want to toggle forward movement
         this->pos += 0.1f * glm::normalize(glm::cross(cameraFront, glm::vec3(0.0f, 1.0f, 0.0f)));
     }
 
     if (s) {
+        // TODO Make this only apply in the x, z planes
         this->pos -= 0.1f * cameraFront;
     }
 
     if (up) {
-        /*std::cout << "Up? " << this->pos.y << std::endl;*/
         this->pos += 0.1f * glm::vec3(0.0f, 1.0f, 0.0f);
     }
     if (down) {
-        /*std::cout << "Down? " << this->pos.y << std::endl;*/
         this->pos -= 0.1f * glm::vec3(0.0f, 1.0f, 0.0f);
     }
 }
@@ -168,8 +165,13 @@ double lastXPos = 0;
 double lastYPos = 0;
 
 void Camera::HandleMouseMovement(GLFWwindow* window, double xpos, double ypos) {
-    this->xrot = xpos / 100.0;
-    this->yrot = -ypos / 100.0;
+    if (!this->state->paused) {
+        this->xrot -= (lastXPos - xpos) / 100.0;
+        this->yrot -= -(lastYPos - ypos) / 100.0;
+    }
+
+    lastXPos = xpos;
+    lastYPos = ypos;
 
     /*std::cout << "xrot: " << this->xrot << ", yrot: " << this->yrot << std::endl;*/
 }
