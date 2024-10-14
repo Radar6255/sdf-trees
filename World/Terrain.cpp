@@ -61,30 +61,29 @@ void Terrain::UpdateTerrain() {
 
     for (int x = 0; x < TERRAIN_LENGTH; x++) {
         for (int y = 0; y < TERRAIN_WIDTH; y++) {
-            int startIndex = x * TERRAIN_LENGTH * 6 + 6 * y;
+            int startIndex = x * TERRAIN_LENGTH * 2 + 2 * y;
+            int curY = x % 2 == 0 ? y : TERRAIN_WIDTH - y;
 
             // First triangle
             terrainHeightMap[startIndex].Position[0] = x;
-            terrainHeightMap[startIndex].Position[1] = HEIGHT * perlinNoise.GetValue(STEP * x, STEP * y, this->alter);
-            terrainHeightMap[startIndex].Position[2] = y;
+            terrainHeightMap[startIndex].Position[1] = HEIGHT * perlinNoise.GetValue(STEP * x, STEP * curY, this->alter);
+            terrainHeightMap[startIndex].Position[2] = curY;
 
-            terrainHeightMap[startIndex + 1].Position[0] = x + 1;
-            terrainHeightMap[startIndex + 1].Position[1] = HEIGHT * perlinNoise.GetValue(STEP * (x + 1), STEP * y, this->alter);
-            terrainHeightMap[startIndex + 1].Position[2] = y;
+            float diffStep = 0.01;
 
-            terrainHeightMap[startIndex + 2].Position[0] = x + 1;
-            terrainHeightMap[startIndex + 2].Position[1] = HEIGHT * perlinNoise.GetValue((x + 1) * STEP, (y + 1) * STEP, this->alter);
-            terrainHeightMap[startIndex + 2].Position[2] = y + 1;
+            // Need to figure out the slope in x
+            double dydx = terrainHeightMap[startIndex].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * x + diffStep * STEP, STEP * curY, this->alter);
+            double dydz = terrainHeightMap[startIndex].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * x, STEP * curY + diffStep * STEP, this->alter);
 
             glm::vec3 b = {
-                1,
-                -terrainHeightMap[startIndex].Position[1] + terrainHeightMap[startIndex + 1].Position[1],
+                STEP * diffStep,
+                dydx,
                 0
             };
             glm::vec3 a = {
-                1,
-                -terrainHeightMap[startIndex + 1].Position[1] + terrainHeightMap[startIndex + 2].Position[1],
-                1
+                0,
+                dydz,
+                STEP * diffStep
             };
             glm::vec3 normal = {
                 a[1] * b[2] - a[2] * b[1],
@@ -93,47 +92,37 @@ void Terrain::UpdateTerrain() {
             };
 
             terrainHeightMap[startIndex].Normal = normal;
-            terrainHeightMap[startIndex + 1].Normal = normal;
-            terrainHeightMap[startIndex + 2].Normal = normal;
 
             // Second triangle
-            terrainHeightMap[startIndex + 3].Position[0] = x;
-            terrainHeightMap[startIndex + 3].Position[1] = HEIGHT * perlinNoise.GetValue(x * STEP, y * STEP, this->alter);
-            terrainHeightMap[startIndex + 3].Position[2] = y;
+            terrainHeightMap[startIndex + 1].Position[0] = x + 1;
+            terrainHeightMap[startIndex + 1].Position[1] = HEIGHT * perlinNoise.GetValue(STEP * (x + 1), STEP * (curY + 1), this->alter);
+            terrainHeightMap[startIndex + 1].Position[2] = curY;
 
-            terrainHeightMap[startIndex + 4].Position[0] = x;
-            terrainHeightMap[startIndex + 4].Position[1] = HEIGHT * perlinNoise.GetValue(x * STEP, (y + 1) * STEP, this->alter);
-            terrainHeightMap[startIndex + 4].Position[2] = y + 1;
+            dydx = terrainHeightMap[startIndex + 1].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * (x + 1) + diffStep * STEP, STEP * curY, this->alter);
+            dydz = terrainHeightMap[startIndex + 1].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * (x + 1), STEP * curY + diffStep * STEP, this->alter);
 
-            terrainHeightMap[startIndex + 5].Position[0] = x + 1;
-            terrainHeightMap[startIndex + 5].Position[1] = HEIGHT * perlinNoise.GetValue((x + 1) * STEP, (y + 1) * STEP, this->alter);
-            terrainHeightMap[startIndex + 5].Position[2] = y + 1;
-
+            b = {
+                STEP * diffStep,
+                dydx,
+                0
+            };
             a = {
                 0,
-                -terrainHeightMap[startIndex + 3].Position[1] + terrainHeightMap[startIndex + 4].Position[1],
-                1
+                dydx,
+                STEP * diffStep
             };
-            b = {
-                1,
-                -terrainHeightMap[startIndex + 4].Position[1] + terrainHeightMap[startIndex + 5].Position[1],
-                1
-            };
-
             normal = {
-                (a[1] * b[2] - a[2] * b[1]),
-                (a[2] * b[0] - a[0] * b[2]),
-                (a[0] * b[1] - a[1] * b[0])
+                a[1] * b[2] - a[2] * b[1],
+                a[2] * b[0] - a[0] * b[2],
+                a[0] * b[1] - a[1] * b[0]
             };
 
-            terrainHeightMap[startIndex + 3].Normal = normal;
-            terrainHeightMap[startIndex + 4].Normal = normal;
-            terrainHeightMap[startIndex + 5].Normal = normal;
+            terrainHeightMap[startIndex + 1].Normal = normal;
         }
     }
 }
 
 void Terrain::Render() {
     glBindVertexArray(this->VAO);
-    glDrawArrays(GL_TRIANGLES, 0, NUM_POINTS);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, NUM_POINTS);
 }

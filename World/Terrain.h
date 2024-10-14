@@ -6,7 +6,7 @@
 #define STEP 0.01f
 #define HEIGHT 20.0f
 
-#define NUM_POINTS TERRAIN_WIDTH * TERRAIN_LENGTH * 2 * 3
+#define NUM_POINTS TERRAIN_WIDTH * TERRAIN_LENGTH * 2
 
 #include "glad/glad.h"
 #include "../GameState.h"

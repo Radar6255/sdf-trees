@@ -15,7 +15,7 @@ void main() {
     // fragColor = vec4(dot(normalize(outLightDir), outNorm) * color, 1.0);
     // fragColor = vec4(outLightDir, 1.0);
 
-    // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    //fragColor = vec4(1.0, 0.0, 0.0, 1.0);
     fragColor = vec4(normalize(norm), 1.0);
 
     // fragColor = texture(tex0, uvFrag);
