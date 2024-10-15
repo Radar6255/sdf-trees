@@ -45,8 +45,11 @@ Terrain::Terrain(GameState* state) {
 };
 
 void Terrain::Update() {
+    std::cout << "In update!" << std::endl;
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
+    std::cout << "Bound array buffer" << std::endl;
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(terrainHeightMap), this->terrainHeightMap);
+    std::cout << "Finished update!" << std::endl;
 }
 
 void Terrain::setUpdateSize(float alter) {
@@ -128,7 +131,7 @@ void Terrain::UpdateTerrain() {
             };
             a = {
                 0,
-                dydx,
+                dydz,
                 STEP * diffStep
             };
             normal = {
