@@ -71,6 +71,7 @@ int main() {
     std::cout << "Starting game!\n";
 
     GameState state;
+    state.paused = true;
 
     if (!glfwInit()) {
         std::cerr << "Failed to initalize GLFW!\n";

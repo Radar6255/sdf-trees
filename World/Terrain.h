@@ -1,12 +1,12 @@
 #pragma once
 
-#define TERRAIN_LENGTH 200
+#define TERRAIN_LENGTH 100
 #define TERRAIN_WIDTH TERRAIN_LENGTH
 #define RENDER_DATA_BUFFERS 1
-#define STEP 0.01f
+#define STEP 0.01
 #define HEIGHT 20.0f
 
-#define NUM_POINTS TERRAIN_WIDTH * TERRAIN_LENGTH * 2
+#define NUM_POINTS TERRAIN_WIDTH * TERRAIN_LENGTH * 2 - TERRAIN_LENGTH * 2 + 4
 
 #include "glad/glad.h"
 #include "../GameState.h"

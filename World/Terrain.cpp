@@ -54,52 +54,72 @@ void Terrain::setUpdateSize(float alter) {
 }
 
 void Terrain::UpdateTerrain() {
-    this->alter+= this->alterSize;
+    this->alter += this->alterSize;
 
     // Starting by creating the mesh
     noise::module::Perlin perlinNoise;
+    int offset = 0;
+    int i = 0;
 
     for (int x = 0; x < TERRAIN_LENGTH; x++) {
         for (int y = 0; y < TERRAIN_WIDTH; y++) {
-            int startIndex = x * TERRAIN_LENGTH * 2 + 2 * y;
-            int curY = x % 2 == 0 ? y : TERRAIN_WIDTH - y;
+            int startIndex = x * TERRAIN_LENGTH * 2 + 2 * y - offset;
+            startIndex = i;
 
-            // First triangle
-            terrainHeightMap[startIndex].Position[0] = x;
-            terrainHeightMap[startIndex].Position[1] = HEIGHT * perlinNoise.GetValue(STEP * x, STEP * curY, this->alter);
-            terrainHeightMap[startIndex].Position[2] = curY;
+            /*std::cout << "Index: " << startIndex;*/
 
+            if (y == 0 && x != 0) {
+                offset += 2;
+            }
+
+            int curY = x % 2 == 0 ? y : TERRAIN_WIDTH - 1 - y;
             float diffStep = 0.01;
+            glm::vec3 a, b, normal;
+            double dydx, dydz;
 
-            // Need to figure out the slope in x
-            double dydx = terrainHeightMap[startIndex].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * x + diffStep * STEP, STEP * curY, this->alter);
-            double dydz = terrainHeightMap[startIndex].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * x, STEP * curY + diffStep * STEP, this->alter);
+            if ((!(curY == TERRAIN_WIDTH && x % 2 == 1) && !(curY == TERRAIN_WIDTH - 1 && x % 2 == 1) && !(curY == 0 && x % 2 == 0)) || x == 0) {
+                // First triangle
+                terrainHeightMap[i].Position[0] = x;
+                terrainHeightMap[i].Position[1] = HEIGHT * perlinNoise.GetValue(STEP * x, STEP * curY, this->alter);
+                /*terrainHeightMap[startIndex].Position[1] = 0;*/
+                terrainHeightMap[i].Position[2] = curY;
 
-            glm::vec3 b = {
-                STEP * diffStep,
-                dydx,
-                0
-            };
-            glm::vec3 a = {
-                0,
-                dydz,
-                STEP * diffStep
-            };
-            glm::vec3 normal = {
-                a[1] * b[2] - a[2] * b[1],
-                a[2] * b[0] - a[0] * b[2],
-                a[0] * b[1] - a[1] * b[0]
-            };
+                /*std::cout << "Point: (" << x << ", " << terrainHeightMap[i].Position[1] << ", " << curY << std::endl;*/
 
-            terrainHeightMap[startIndex].Normal = normal;
+                // Need to figure out the slope in x
+                dydx = terrainHeightMap[i].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * x + diffStep * STEP, STEP * curY, this->alter);
+                dydz = terrainHeightMap[i].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * x, STEP * curY + diffStep * STEP, this->alter);
+
+                b = {
+                    STEP * diffStep,
+                    dydx,
+                    0
+                };
+                a = {
+                    0,
+                    dydz,
+                    STEP * diffStep
+                };
+                normal = {
+                    a[1] * b[2] - a[2] * b[1],
+                    a[2] * b[0] - a[0] * b[2],
+                    a[0] * b[1] - a[1] * b[0]
+                };
+
+                terrainHeightMap[i].Normal = normal;
+                /*terrainHeightMap[startIndex].Normal = {0.0, 1.0, 0.0};*/
+                i++;
+            }
 
             // Second triangle
-            terrainHeightMap[startIndex + 1].Position[0] = x + 1;
-            terrainHeightMap[startIndex + 1].Position[1] = HEIGHT * perlinNoise.GetValue(STEP * (x + 1), STEP * (curY + 1), this->alter);
-            terrainHeightMap[startIndex + 1].Position[2] = curY;
+            terrainHeightMap[i].Position[0] = x + 1;
+            terrainHeightMap[i].Position[1] = HEIGHT * perlinNoise.GetValue(STEP * (x + 1), STEP * curY, this->alter);
+            /*terrainHeightMap[i].Position[1] = 0;*/
+            terrainHeightMap[i].Position[2] = curY;
+            /*std::cout << "Point: (" << x + 1 << ", " << terrainHeightMap[i].Position[1] << ", " << curY << std::endl;*/
 
-            dydx = terrainHeightMap[startIndex + 1].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * (x + 1) + diffStep * STEP, STEP * curY, this->alter);
-            dydz = terrainHeightMap[startIndex + 1].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * (x + 1), STEP * curY + diffStep * STEP, this->alter);
+            dydx = terrainHeightMap[i].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * (x + 1) + diffStep * STEP, STEP * curY, this->alter);
+            dydz = terrainHeightMap[i].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * (x + 1), STEP * curY + diffStep * STEP, this->alter);
 
             b = {
                 STEP * diffStep,
@@ -117,7 +137,9 @@ void Terrain::UpdateTerrain() {
                 a[0] * b[1] - a[1] * b[0]
             };
 
-            terrainHeightMap[startIndex + 1].Normal = normal;
+            terrainHeightMap[i].Normal = normal;
+            /*terrainHeightMap[i].Normal = {1.0, 0.0, 0.0};*/
+            i++;
         }
     }
 }
