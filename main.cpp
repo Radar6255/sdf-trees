@@ -1,3 +1,4 @@
+#include "World/CustomModel.h"
 #include "glad/glad.h"
 #include "UseImGui.h"
 #include "GLFW/glfw3.h"
@@ -115,8 +116,10 @@ int main() {
 
     glEnable(GL_DEPTH_TEST);
 
-    Cube *cube = new Cube();
+    /*Cube *cube = new Cube();*/
     Terrain *terrain = new Terrain(&state);
+    CustomModel *cm = new CustomModel("assets/models/untitled.obj");
+
     cam = new Camera(program, &state);
 
     // Registering key callbacks to handle input
@@ -129,7 +132,7 @@ int main() {
     int iter = 0;
     std::atomic<bool> updatedTerrain(true);
     int updates = 0;
-    bool updateTerrain = true;
+    bool updateTerrain = false;
 
     while (!glfwWindowShouldClose(window)) {
         if (updateTerrain && updatedTerrain) {
@@ -159,6 +162,7 @@ int main() {
 
         /*cube->Render();*/
         terrain->Render();
+        cm->Render();
 
         myimgui.Update(terrain, &updateTerrain);
         myimgui.Render();

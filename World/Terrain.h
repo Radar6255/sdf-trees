@@ -9,14 +9,9 @@
 #define NUM_POINTS TERRAIN_WIDTH * TERRAIN_LENGTH * 2
 
 #include "glad/glad.h"
+#include "Vertex.h"
 #include "../GameState.h"
 #include <glm/ext/vector_float3.hpp>
-
-class Vertex {
-public:
-    glm::vec3 Position;
-    glm::vec3 Normal;
-};
 
 class Terrain {
 public:

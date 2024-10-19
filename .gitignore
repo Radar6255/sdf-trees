@@ -5,3 +5,4 @@ CMakeFiles/
 build/
 imgui.ini
 Makefile
+vcpkg_installed/
