@@ -118,7 +118,7 @@ int main() {
 
     /*Cube *cube = new Cube();*/
     Terrain *terrain = new Terrain(&state);
-    CustomModel *cm = new CustomModel("assets/models/untitled.obj");
+    /*CustomModel *cm = new CustomModel("assets/models/untitled.obj");*/
 
     cam = new Camera(program, &state);
 
@@ -132,7 +132,7 @@ int main() {
     int iter = 0;
     std::atomic<bool> updatedTerrain(true);
     int updates = 0;
-    bool updateTerrain = false;
+    bool updateTerrain = true;
 
     while (!glfwWindowShouldClose(window)) {
         if (updateTerrain && updatedTerrain) {
@@ -161,8 +161,8 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         /*cube->Render();*/
-        terrain->Render();
-        cm->Render();
+        terrain->Render(program);
+        /*cm->Render();*/
 
         myimgui.Update(terrain, &updateTerrain);
         myimgui.Render();

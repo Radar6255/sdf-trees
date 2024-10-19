@@ -21,12 +21,10 @@ void UseImGui::Update(Terrain* terrain, bool* updateTerrain) {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    static float f = 0.0f;
-
     ImGui::Begin("Test");
     ImGui::Text("Magic here");
     ImGui::SliderFloat("alterSize", &terrain->alterSize, -0.2f, 0.2f);
-    ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+    ImGui::SliderFloat("treeChanceThresh", &terrain->treeChanceThresh, 0.1f, 6.0f);
 
     ImGui::Checkbox("Update Terrain", updateTerrain);
 

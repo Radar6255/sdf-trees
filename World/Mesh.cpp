@@ -1,5 +1,6 @@
-#include <iostream>
-#include <ostream>
+#include <glm/ext/matrix_float4x4.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <vector>
 #include "Mesh.h"
 #include "Vertex.h"
@@ -40,10 +41,19 @@ Mesh::Mesh(std::vector<Vertex> verticies, std::vector<unsigned int> indicies) {
 }
 
 void Mesh::Draw() {
-    /*std::cout << "Index count " << indicies.size() << std::endl;*/
-    /*std::cout << "Vertex count " << verticies.size() << std::endl;*/
     glBindVertexArray(this->VAO);
-    /*glDrawElements(GL_TRIANGLES, indicies.size(), GL_UNSIGNED_INT, nullptr);*/
+    glDrawElements(GL_TRIANGLES, indicies.size(), GL_UNSIGNED_INT, nullptr);
+    glBindVertexArray(0);
+}
+
+void Mesh::Draw(Program* program, glm::vec3 pos) {
+    glm::mat4 model = glm::translate(glm::mat4(1), pos);
+    model = glm::scale(model, {0.5, 0.5, 0.5});
+
+    GLuint modelLoc = glGetUniformLocation(program->program, "model");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+    glBindVertexArray(this->VAO);
     glDrawElements(GL_TRIANGLES, indicies.size(), GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
 }

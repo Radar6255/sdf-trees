@@ -76,6 +76,12 @@ Mesh CustomModel::processMesh(aiMesh *mesh, const aiScene *scene) {
     return out;
 }
 
+void CustomModel::Render(Program* program, glm::vec3 pos) {
+    for (Mesh t : meshes) {
+        t.Draw(program, pos);
+    }
+}
+
 void CustomModel::Render() {
     for (Mesh t : meshes) {
         t.Draw();
