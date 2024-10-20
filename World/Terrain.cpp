@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdlib>
 #include <glm/ext/quaternion_geometric.hpp>
 #include <glm/ext/vector_float3.hpp>
@@ -11,6 +12,7 @@ void printPoint(float* array){
     std::cout << "(" << array[0] << ", " << array[1] << ", " << array[2] << ")";
 }
 
+noise::module::Perlin treeNoise;
 Terrain::Terrain(GameState* state) {
     /*this->tree = new CustomModel("assets/models/tree.obj");*/
     this->tree = new CustomModel("assets/models/tree2.obj");
@@ -69,11 +71,15 @@ void Terrain::UpdateTerrain() {
     noise::module::Perlin perlinNoise;
     int offset = 0;
     int i = 0;
-
-    noise::module::Perlin treeNoise;
+    int treeDensity = 4;
 
     for (int x = 0; x < TERRAIN_LENGTH; x++) {
         for (int y = 0; y < TERRAIN_WIDTH; y++) {
+            bool genTree = false;
+            if (x % treeDensity == 0 && y % treeDensity == 0) {
+                genTree = true;
+            }
+
             int startIndex = i;
 
             if (y == 0 && x != 0) {
@@ -117,11 +123,11 @@ void Terrain::UpdateTerrain() {
                 terrainHeightMap[i].Normal = normal;
 
                 /*terrainHeightMap[startIndex].Normal = {0.0, 1.0, 0.0};*/
-                float treeChance = generateTree(x, curY, i, this->alter, perlinNoise);
-                if (treeChance > treeChanceThresh) {
-                    terrainHeightMap[i].Normal = {0.0, 1.0, 0.0};
-                    treeListNew.push_back({x, terrainHeightMap[i].Position[1], curY});
-                }
+                /*float treeChance = generateTree(x, curY, i, this->alter, perlinNoise);*/
+                /*if (genTree && treeChance > treeChanceThresh) {*/
+                /*    terrainHeightMap[i].Normal = {0.0, 1.0, 0.0};*/
+                    /*treeListNew.push_back({x, terrainHeightMap[i].Position[1], curY});*/
+                /*}*/
                 i++;
             }
 
@@ -154,9 +160,20 @@ void Terrain::UpdateTerrain() {
             terrainHeightMap[i].Normal = normal;
             /*terrainHeightMap[i].Normal = {1.0, 0.0, 0.0};*/
             float treeChance = generateTree(x + 1, curY, i, this->alter, perlinNoise);
-            if (treeChance > treeChanceThresh) {
+            if (genTree && treeChance > treeChanceThresh) {
                 terrainHeightMap[i].Normal = {0.0, 1.0, 0.0};
-                treeListNew.push_back({x + 1, terrainHeightMap[i].Position[1], curY});
+
+                float treeX, treeY;
+                float theta = treeNoise.GetValue(50 * STEP * x + 1, 50 * STEP * curY, alter);
+                float spiral = 5.0 * treeNoise.GetValue(STEP * x + 1, STEP * curY, alter + STEP * 5) + 0.1 * theta;
+                treeX = spiral * cos(theta) + x + 1;
+                treeY = spiral * sin(theta) + curY;
+                float treeHeight = HEIGHT * perlinNoise.GetValue(STEP * treeX, STEP * treeY, this->alter);
+
+                /*std::cout << "(" << spiral * cos(theta) << ", " << spiral * sin(theta) << ")" <<*/
+                /*    ", (" << treeX << ", " << treeY << ")"<< std::endl;*/
+
+                treeListNew.push_back({treeX, terrainHeightMap[i].Position[1], treeY});
             }
 
             i++;
@@ -168,7 +185,7 @@ void Terrain::UpdateTerrain() {
 
 float Terrain::generateTree(int x, int curY, int i, float alter, noise::module::Perlin perlinNoise) {
     return (-terrainHeightMap[i].Position[1] + HEIGHT * perlinNoise.GetValue(STEP * x, STEP * curY, alter + 5 * STEP))
-        * perlinNoise.GetValue(20 * STEP * x, 20 * STEP * curY, alter);
+        * treeNoise.GetValue(10 * STEP * x, 10 * STEP * curY, alter);
         // If there in 5 steps the height is higher than current color green
         /*terrainHeightMap[i].Normal.y = 1.0;*/
     /*    return true;*/
