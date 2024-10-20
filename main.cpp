@@ -11,6 +11,7 @@
 
 #include <GL/gl.h>
 #include <atomic>
+#include <chrono>
 #include <imgui_impl_glfw.h>
 #include <iostream>
 #include <ostream>
@@ -133,8 +134,11 @@ int main() {
     std::atomic<bool> updatedTerrain(true);
     int updates = 0;
     bool updateTerrain = true;
+    int frameCount = 0;
+    unsigned int frameTime = 0;
 
     while (!glfwWindowShouldClose(window)) {
+        std::chrono::time_point<std::chrono::high_resolution_clock> startFrame = std::chrono::high_resolution_clock::now();
         if (updateTerrain && updatedTerrain) {
             // TODO Here I want to update the buffer
             if (iter) {
@@ -143,6 +147,9 @@ int main() {
 
             // This update is to update the buffer
             std::cout << "Updates per second: " << updates / glfwGetTime() << std::endl;
+            if (frameCount) {
+                std::cout << "Avg FrameTime: " << frameTime / frameCount << std::endl;
+            }
             terrain->Update();
 
             updatedTerrain = false;
@@ -169,6 +176,9 @@ int main() {
 
 
         glfwSwapBuffers(window);
+        frameTime += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - startFrame).count();
+        /*std::cout << "Render time: " << std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - startFrame).count() << std::endl;*/
+        frameCount++;
     }
     myimgui.Shutdown();
 

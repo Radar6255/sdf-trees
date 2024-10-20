@@ -52,11 +52,8 @@ Terrain::Terrain(GameState* state) {
 };
 
 void Terrain::Update() {
-    std::cout << "In update!" << std::endl;
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
-    std::cout << "Bound array buffer" << std::endl;
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(terrainHeightMap), this->terrainHeightMap);
-    std::cout << "Finished update!" << std::endl;
 }
 
 void Terrain::setUpdateSize(float alter) {
@@ -69,7 +66,6 @@ void Terrain::UpdateTerrain() {
 
     // Starting by creating the mesh
     noise::module::Perlin perlinNoise;
-    int offset = 0;
     int i = 0;
     int treeDensity = 4;
 
@@ -78,12 +74,6 @@ void Terrain::UpdateTerrain() {
             bool genTree = false;
             if (x % treeDensity == 0 && y % treeDensity == 0) {
                 genTree = true;
-            }
-
-            int startIndex = i;
-
-            if (y == 0 && x != 0) {
-                offset += 2;
             }
 
             int curY = x % 2 == 0 ? y : TERRAIN_WIDTH - 1 - y;
@@ -95,7 +85,6 @@ void Terrain::UpdateTerrain() {
                 // First triangle
                 terrainHeightMap[i].Position[0] = x;
                 terrainHeightMap[i].Position[1] = HEIGHT * perlinNoise.GetValue(STEP * x, STEP * curY, this->alter);
-                /*terrainHeightMap[startIndex].Position[1] = 0;*/
                 terrainHeightMap[i].Position[2] = curY;
 
                 /*std::cout << "Point: (" << x << ", " << terrainHeightMap[i].Position[1] << ", " << curY << std::endl;*/
@@ -122,7 +111,6 @@ void Terrain::UpdateTerrain() {
 
                 terrainHeightMap[i].Normal = normal;
 
-                /*terrainHeightMap[startIndex].Normal = {0.0, 1.0, 0.0};*/
                 /*float treeChance = generateTree(x, curY, i, this->alter, perlinNoise);*/
                 /*if (genTree && treeChance > treeChanceThresh) {*/
                 /*    terrainHeightMap[i].Normal = {0.0, 1.0, 0.0};*/
@@ -159,9 +147,8 @@ void Terrain::UpdateTerrain() {
 
             terrainHeightMap[i].Normal = normal;
             /*terrainHeightMap[i].Normal = {1.0, 0.0, 0.0};*/
-            float treeChance = generateTree(x + 1, curY, i, this->alter, perlinNoise);
-            if (genTree && treeChance > treeChanceThresh) {
-                terrainHeightMap[i].Normal = {0.0, 1.0, 0.0};
+            if (genTree && generateTree(x + 1, curY, i, this->alter, perlinNoise) > treeChanceThresh) {
+                /*terrainHeightMap[i].Normal = {0.0, 1.0, 0.0};*/
 
                 float treeX, treeY;
                 float theta = treeNoise.GetValue(50 * STEP * x + 1, 50 * STEP * curY, alter);
@@ -173,7 +160,7 @@ void Terrain::UpdateTerrain() {
                 /*std::cout << "(" << spiral * cos(theta) << ", " << spiral * sin(theta) << ")" <<*/
                 /*    ", (" << treeX << ", " << treeY << ")"<< std::endl;*/
 
-                treeListNew.push_back({treeX, terrainHeightMap[i].Position[1], treeY});
+                treeListNew.push_back({treeX, treeHeight, treeY});
             }
 
             i++;
@@ -184,8 +171,14 @@ void Terrain::UpdateTerrain() {
 }
 
 float Terrain::generateTree(int x, int curY, int i, float alter, noise::module::Perlin perlinNoise) {
-    return (-terrainHeightMap[i].Position[1] + HEIGHT * perlinNoise.GetValue(STEP * x, STEP * curY, alter + 5 * STEP))
-        * treeNoise.GetValue(10 * STEP * x, 10 * STEP * curY, alter);
+    /*return (-terrainHeightMap[i].Position[1] + HEIGHT * perlinNoise.GetValue(STEP * x, STEP * curY, alter + 5 * STEP))*/
+    /*    * treeNoise.GetValue(10 * STEP * x, 10 * STEP * curY, alter);*/
+    /*return treeNoise.GetValue(10 * STEP * x, 10 * STEP * curY, alter);*/
+
+    if (terrainHeightMap[i].Position[1] > HEIGHT * perlinNoise.GetValue(STEP * x, STEP * curY, alter + 5 * STEP)) {
+        return treeNoise.GetValue(10 * STEP * x, 10 * STEP * curY, alter);
+    }
+    return 0;
         // If there in 5 steps the height is higher than current color green
         /*terrainHeightMap[i].Normal.y = 1.0;*/
     /*    return true;*/
