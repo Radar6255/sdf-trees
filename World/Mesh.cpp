@@ -1,6 +1,7 @@
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/trigonometric.hpp>
 #include <vector>
 #include "Mesh.h"
 #include "Vertex.h"
@@ -46,9 +47,20 @@ void Mesh::Draw() {
     glBindVertexArray(0);
 }
 
-void Mesh::Draw(Program* program, glm::vec3 pos) {
+/**
+ * @brief Function to draw the mesh
+ *
+ * @param program The program that will be drawing the mesh, used to get uniform locations
+ * @param pos The position offset of the object
+ * @param xrot The x rotation of the object in degrees
+ * @param yrot The y rotation of the object in degrees
+ */
+void Mesh::Draw(Program* program, glm::vec3 pos, float xrot, float yrot) {
     glm::mat4 model = glm::translate(glm::mat4(1), pos);
-    model = glm::scale(model, {0.5, 0.5, 0.5});
+    /*model = glm::scale(model, {0.5, 0.5, 0.5});*/
+
+    model = glm::rotate(model, glm::degrees(xrot), {0.0, 1.0, 0.0});
+    model = glm::rotate(model, glm::degrees(yrot), {0.0, 0.0, 1.0});
 
     GLuint modelLoc = glGetUniformLocation(program->program, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));

@@ -8,6 +8,12 @@
 #include "CustomModel.h"
 
 
+const char *treeModels[] = {
+    "assets/models/tree_a.obj",
+    "assets/models/tree_b.obj",
+    "assets/models/tree_c.obj"
+};
+
 void printPoint(float* array){
     std::cout << "(" << array[0] << ", " << array[1] << ", " << array[2] << ")";
 }
@@ -15,7 +21,12 @@ void printPoint(float* array){
 noise::module::Perlin treeNoise;
 Terrain::Terrain(GameState* state) {
     /*this->tree = new CustomModel("assets/models/tree.obj");*/
-    this->tree = new CustomModel("assets/models/tree2.obj");
+    /*this->tree = new CustomModel("assets/models/tree2.obj");*/
+    this->tree = new CustomModel("assets/models/tree_c.obj");
+    for (const char* model : treeModels){
+        this->trees.push_back(new CustomModel(model));
+    }
+    /*this->tree = new CustomModel("assets/models/tree.stl");*/
 
     this->state =state;
     this->alter = 0.0f;
@@ -61,7 +72,7 @@ void Terrain::setUpdateSize(float alter) {
 }
 
 void Terrain::UpdateTerrain() {
-    std::vector<glm::vec3> treeListNew;
+    std::vector<TreeDetails> treeListNew;
     this->alter += this->alterSize;
 
     // Starting by creating the mesh
@@ -151,8 +162,8 @@ void Terrain::UpdateTerrain() {
                 /*terrainHeightMap[i].Normal = {0.0, 1.0, 0.0};*/
 
                 float treeX, treeY;
-                float theta = treeNoise.GetValue(50 * STEP * x + 1, 50 * STEP * curY, alter);
-                float spiral = 5.0 * treeNoise.GetValue(STEP * x + 1, STEP * curY, alter + STEP * 5) + 0.1 * theta;
+                float theta = treeNoise.GetValue(50 * STEP * (x + 1), 50 * STEP * curY, alter);
+                float spiral = 5.0 * treeNoise.GetValue(STEP * (x + 1), STEP * curY, alter + STEP * 5) + 0.1 * theta;
                 treeX = spiral * cos(theta) + x + 1;
                 treeY = spiral * sin(theta) + curY;
                 float treeHeight = HEIGHT * perlinNoise.GetValue(STEP * treeX, STEP * treeY, this->alter);
@@ -160,7 +171,12 @@ void Terrain::UpdateTerrain() {
                 /*std::cout << "(" << spiral * cos(theta) << ", " << spiral * sin(theta) << ")" <<*/
                 /*    ", (" << treeX << ", " << treeY << ")"<< std::endl;*/
 
-                treeListNew.push_back({treeX, treeHeight, treeY});
+                TreeDetails td;
+                td.pos = {treeX, treeHeight, treeY};
+                td.xrot = 0.1 * treeNoise.GetValue(STEP * (x + 1), STEP * curY, 0.1 * alter);
+                td.yrot = 0;
+                td.variation = (int) round(10 * generateTree(x + 1, curY, i, this->alter, perlinNoise)) % this->trees.size();
+                treeListNew.push_back(td);
             }
 
             i++;
@@ -191,9 +207,9 @@ void Terrain::Render(Program* program) {
     glBindVertexArray(this->VAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, NUM_POINTS);
 
-    for (glm::vec3 pos : treeList) {
+    for (TreeDetails td : treeList) {
         // TODO Need to draw a tree here at a specific point
         /*std::cout << "Tree: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;*/
-        this->tree->Render(program, pos);
+        this->trees[td.variation]->Render(program, td.pos, td.xrot, td.yrot);
     }
 }

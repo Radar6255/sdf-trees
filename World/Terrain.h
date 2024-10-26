@@ -3,7 +3,7 @@
 #include "CustomModel.h"
 #include <noise/module/perlin.h>
 #include <vector>
-#define TERRAIN_LENGTH 200
+#define TERRAIN_LENGTH 150
 #define TERRAIN_WIDTH TERRAIN_LENGTH
 #define RENDER_DATA_BUFFERS 1
 #define STEP 0.01
@@ -16,6 +16,20 @@
 #include "../GameState.h"
 #include "../engine/Program.h"
 #include <glm/ext/vector_float3.hpp>
+
+/*= {*/
+/*    "assets/models/tree2.obj",*/
+/*    "assets/models/tree_b.obj",*/
+/*    "assets/models/tree_c.obj"*/
+/*};*/
+
+class TreeDetails {
+public:
+    glm::vec3 pos;
+    float xrot;
+    float yrot;
+    int variation;
+};
 
 class Terrain {
 public:
@@ -33,8 +47,9 @@ private:
     float alter;
     GameState* state;
     CustomModel* tree;
+    std::vector<CustomModel*> trees;
 
-    std::vector<glm::vec3> treeList;
+    std::vector<TreeDetails> treeList;
 
     float generateTree(int x, int curY, int i, float alter, noise::module::Perlin perlinNoise);
 };

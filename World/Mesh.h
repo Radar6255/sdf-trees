@@ -10,7 +10,7 @@ class Mesh {
     public:
         Mesh(std::vector<Vertex> verticies, std::vector<unsigned int> indicies);
         void Draw();
-        void Draw(Program* program, glm::vec3);
+        void Draw(Program* program, glm::vec3 pos, float xrot, float yrot);
     private:
         std::vector<Vertex> verticies;
         std::vector<unsigned int> indicies;

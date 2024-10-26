@@ -20,7 +20,7 @@ Camera::Camera(Program* program, GameState* state) {
     this->viewLoc = glGetUniformLocation(program->program, "view");
     this->perspectiveLoc = glGetUniformLocation(program->program, "projection");
 
-    this->pos = glm::vec3(0.0f, 0.0f, 0.0f);
+    this->pos = glm::vec3(0.0f, 10.0f, 0.0f);
     this->xrot = 2.0f;
     this->yrot = -55.0f;
 

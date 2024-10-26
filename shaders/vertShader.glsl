@@ -12,6 +12,6 @@ out vec3 norm;
 void main() {
     //gl_Position = vec4(vertexPosition, 1.0);
     gl_Position = projection * view * model * vec4(vertexPosition, 1.0);
-    norm = vertexNormal;
+    norm = (vec4(vertexNormal, 1.0)).xyz;
 }
 

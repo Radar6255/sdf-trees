@@ -11,7 +11,7 @@ class CustomModel {
     public:
         CustomModel(const char * location);
         void Render();
-        void Render(Program* program, glm::vec3 pos);
+        void Render(Program* program, glm::vec3 pos, float xrot, float yrot);
     private:
         void processNode(aiNode *node, const aiScene *scene);
         Mesh processMesh(aiMesh *mesh, const aiScene *scene);
