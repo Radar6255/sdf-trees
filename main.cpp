@@ -118,7 +118,15 @@ int main() {
     glEnable(GL_DEPTH_TEST);
 
     /*Cube *cube = new Cube();*/
-    Terrain *terrain = new Terrain(&state);
+    Terrain *terrain = new Terrain(&state, 0, 0, 100, 100);
+    Terrain *terrain2 = new Terrain(&state, 100, 0, 100, 100);
+
+    Terrain world[4] = {
+        {&state, 0, 0, 100, 100},
+        {&state, 100, 0, 100, 100},
+        {&state, 0, 100, 100, 100},
+        {&state, 100, 100, 100, 100}
+    };
     /*CustomModel *cm = new CustomModel("assets/models/untitled.obj");*/
 
     cam = new Camera(program, &state);
@@ -129,9 +137,9 @@ int main() {
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    std::thread t1;
+    std::thread t1[4];
     int iter = 0;
-    std::atomic<bool> updatedTerrain(true);
+    std::atomic<short> updatedTerrain(4);
     int updates = 0;
     bool updateTerrain = true;
     int frameCount = 0;
@@ -139,10 +147,12 @@ int main() {
 
     while (!glfwWindowShouldClose(window)) {
         std::chrono::time_point<std::chrono::high_resolution_clock> startFrame = std::chrono::high_resolution_clock::now();
-        if (updateTerrain && updatedTerrain) {
+        if (updateTerrain && updatedTerrain == 4) {
             // TODO Here I want to update the buffer
             if (iter) {
-                t1.join();
+                for (std::thread &t: t1) {
+                    t.join();
+                }
             }
 
             // This update is to update the buffer
@@ -150,15 +160,20 @@ int main() {
             if (frameCount) {
                 std::cout << "Avg FrameTime: " << frameTime / frameCount << std::endl;
             }
-            terrain->Update();
 
-            updatedTerrain = false;
-            // Here we are updating the mesh that we made
-            t1 = std::thread([&updatedTerrain, &terrain] {
-                terrain->UpdateTerrain();
-                /*std::cout << "Updated terrain mesh!" << std::endl;*/
-                updatedTerrain = true;
-            });
+            updatedTerrain = 0;
+            int i = 0;
+            for (Terrain &t: world) {
+                t.Update();
+
+                // Here we are updating the mesh that we made
+                t1[i] = std::thread([&updatedTerrain, &t] {
+                    std::cout << "Starting update..." << std::endl;
+                    t.UpdateTerrain();
+                    updatedTerrain++;
+                });
+                i++;
+            }
             updates++;
         }
         iter++;
@@ -168,7 +183,11 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         /*cube->Render();*/
-        terrain->Render(program);
+        /*terrain->Render(program);*/
+        /*terrain2->Render(program);*/
+        for (Terrain t : world) {
+            t.Render(program);
+        }
         /*cm->Render();*/
 
         myimgui.Update(terrain, &updateTerrain);

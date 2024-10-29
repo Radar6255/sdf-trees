@@ -2,10 +2,12 @@
 #include <cstdlib>
 #include <glm/ext/quaternion_geometric.hpp>
 #include <glm/ext/vector_float3.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <noise/noise.h>
 #include "Terrain.h"
 #include "CustomModel.h"
+#include "Vertex.h"
 
 
 const char *treeModels[] = {
@@ -19,7 +21,16 @@ void printPoint(float* array){
 }
 
 noise::module::Perlin treeNoise;
-Terrain::Terrain(GameState* state) {
+Terrain::Terrain(GameState* state, int startX, int startY, int width, int length) {
+    this->startX = startX;
+    this->startY = startY;
+    this->width = width;
+    this->length = length;
+
+    long numPoints = this->width * this->length * 2 - this->length / 2;
+    this->terrainHeightMap = new Vertex[numPoints];
+    this->terrainHeightMapSize = sizeof(Vertex) * numPoints;
+
     /*this->tree = new CustomModel("assets/models/tree.obj");*/
     /*this->tree = new CustomModel("assets/models/tree2.obj");*/
     this->tree = new CustomModel("assets/models/tree_c.obj");
@@ -46,7 +57,7 @@ Terrain::Terrain(GameState* state) {
 
     // Dealing with verticies
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(this->terrainHeightMap), this->terrainHeightMap, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, this->terrainHeightMapSize, this->terrainHeightMap, GL_DYNAMIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
     glEnableVertexAttribArray(0);
@@ -64,7 +75,7 @@ Terrain::Terrain(GameState* state) {
 
 void Terrain::Update() {
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(terrainHeightMap), this->terrainHeightMap);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, this->terrainHeightMapSize, this->terrainHeightMap);
 }
 
 void Terrain::setUpdateSize(float alter) {
@@ -80,29 +91,34 @@ void Terrain::UpdateTerrain() {
     int i = 0;
     int treeDensity = 4;
 
-    for (int x = 0; x < TERRAIN_LENGTH; x++) {
-        for (int y = 0; y < TERRAIN_WIDTH; y++) {
+    for (int x = 0; x < this->length; x++) {
+        for (int y = 0; y < this->width; y++) {
+            int curX = x;
+            int curY = curX % 2 == 0 ? y : this->width - 1 - y;
+
+            curX = curX + this->startX;
+            curY = curY + this->startY;
+
             bool genTree = false;
-            if (x % treeDensity == 0 && y % treeDensity == 0) {
+            if (curX % treeDensity == 0 && curY % treeDensity == 0) {
                 genTree = true;
             }
 
-            int curY = x % 2 == 0 ? y : TERRAIN_WIDTH - 1 - y;
             float diffStep = 0.01;
             glm::vec3 a, b, normal;
             double dydx, dydz;
 
-            if ((!(curY == TERRAIN_WIDTH && x % 2 == 1) && !(curY == TERRAIN_WIDTH - 1 && x % 2 == 1) && !(curY == 0 && x % 2 == 0)) || x == 0) {
+            if ((!(curY == this->width && curX % 2 == 1) && !(curY == this->width - 1 && curX % 2 == 1) && !(curY == startX && curX % 2 == 0)) || curX == startX) {
                 // First triangle
-                terrainHeightMap[i].Position[0] = x;
-                terrainHeightMap[i].Position[1] = HEIGHT * perlinNoise.GetValue(STEP * x, STEP * curY, this->alter);
+                terrainHeightMap[i].Position[0] = curX;
+                terrainHeightMap[i].Position[1] = HEIGHT * perlinNoise.GetValue(STEP * curX, STEP * curY, this->alter);
                 terrainHeightMap[i].Position[2] = curY;
 
                 /*std::cout << "Point: (" << x << ", " << terrainHeightMap[i].Position[1] << ", " << curY << std::endl;*/
 
                 // Need to figure out the slope in x
-                dydx = terrainHeightMap[i].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * x + diffStep * STEP, STEP * curY, this->alter);
-                dydz = terrainHeightMap[i].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * x, STEP * curY + diffStep * STEP, this->alter);
+                dydx = terrainHeightMap[i].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * curX + diffStep * STEP, STEP * curY, this->alter);
+                dydz = terrainHeightMap[i].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * curX, STEP * curY + diffStep * STEP, this->alter);
 
                 b = {
                     STEP * diffStep,
@@ -131,14 +147,14 @@ void Terrain::UpdateTerrain() {
             }
 
             // Second triangle
-            terrainHeightMap[i].Position[0] = x + 1;
-            terrainHeightMap[i].Position[1] = HEIGHT * perlinNoise.GetValue(STEP * (x + 1), STEP * curY, this->alter);
+            terrainHeightMap[i].Position[0] = curX + 1;
+            terrainHeightMap[i].Position[1] = HEIGHT * perlinNoise.GetValue(STEP * (curX + 1), STEP * curY, this->alter);
             /*terrainHeightMap[i].Position[1] = 0;*/
             terrainHeightMap[i].Position[2] = curY;
             /*std::cout << "Point: (" << x + 1 << ", " << terrainHeightMap[i].Position[1] << ", " << curY << std::endl;*/
 
-            dydx = terrainHeightMap[i].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * (x + 1) + diffStep * STEP, STEP * curY, this->alter);
-            dydz = terrainHeightMap[i].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * (x + 1), STEP * curY + diffStep * STEP, this->alter);
+            dydx = terrainHeightMap[i].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * (curX + 1) + diffStep * STEP, STEP * curY, this->alter);
+            dydz = terrainHeightMap[i].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * (curX + 1), STEP * curY + diffStep * STEP, this->alter);
 
             b = {
                 STEP * diffStep,
@@ -158,13 +174,13 @@ void Terrain::UpdateTerrain() {
 
             terrainHeightMap[i].Normal = normal;
             /*terrainHeightMap[i].Normal = {1.0, 0.0, 0.0};*/
-            if (genTree && generateTree(x + 1, curY, i, this->alter, perlinNoise) > treeChanceThresh) {
+            if (genTree && generateTree(curX + 1, curY, i, this->alter, perlinNoise) > treeChanceThresh) {
                 /*terrainHeightMap[i].Normal = {0.0, 1.0, 0.0};*/
 
                 float treeX, treeY;
-                float theta = treeNoise.GetValue(50 * STEP * (x + 1), 50 * STEP * curY, alter);
-                float spiral = 5.0 * treeNoise.GetValue(STEP * (x + 1), STEP * curY, alter + STEP * 5) + 0.1 * theta;
-                treeX = spiral * cos(theta) + x + 1;
+                float theta = treeNoise.GetValue(50 * STEP * (curX + 1), 50 * STEP * curY, alter);
+                float spiral = 5.0 * treeNoise.GetValue(STEP * (curX + 1), STEP * curY, alter + STEP * 5) + 0.1 * theta;
+                treeX = spiral * cos(theta) + curX + 1;
                 treeY = spiral * sin(theta) + curY;
                 float treeHeight = HEIGHT * perlinNoise.GetValue(STEP * treeX, STEP * treeY, this->alter);
 
@@ -173,9 +189,9 @@ void Terrain::UpdateTerrain() {
 
                 TreeDetails td;
                 td.pos = {treeX, treeHeight, treeY};
-                td.xrot = 0.1 * treeNoise.GetValue(STEP * (x + 1), STEP * curY, 0.1 * alter);
+                td.xrot = 0.1 * treeNoise.GetValue(STEP * (curX + 1), STEP * curY, 0.1 * alter);
                 td.yrot = 0;
-                td.variation = (int) round(10 * generateTree(x + 1, curY, i, this->alter, perlinNoise)) % this->trees.size();
+                td.variation = (int) round(10 * generateTree(curX + 1, curY, i, this->alter, perlinNoise)) % this->trees.size();
                 treeListNew.push_back(td);
             }
 
@@ -204,8 +220,12 @@ float Terrain::generateTree(int x, int curY, int i, float alter, noise::module::
 }
 
 void Terrain::Render(Program* program) {
+    glm::mat4 model = glm::mat4(1);
+
+    GLuint modelLoc = glGetUniformLocation(program->program, "model");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glBindVertexArray(this->VAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, NUM_POINTS);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, this->terrainHeightMapSize / sizeof(Vertex));
 
     for (TreeDetails td : treeList) {
         // TODO Need to draw a tree here at a specific point

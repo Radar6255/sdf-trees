@@ -33,7 +33,7 @@ public:
 
 class Terrain {
 public:
-    Terrain(GameState* state);
+    Terrain(GameState* state, int startX, int startY, int width, int length);
     void Render(Program* program);
     void Update();
     void UpdateTerrain();
@@ -41,8 +41,11 @@ public:
     float alterSize = 0.005f;
     float treeChanceThresh = 0.4f;
 private:
+    unsigned long terrainHeightMapSize;
+    int startX, startY, width, length;
     GLuint VAO;
-    Vertex terrainHeightMap[NUM_POINTS];
+    Vertex *terrainHeightMap;
+    /*Vertex terrainHeightMap[NUM_POINTS];*/
     GLuint *buffers;
     float alter;
     GameState* state;
