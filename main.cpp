@@ -121,11 +121,14 @@ int main() {
     Terrain *terrain = new Terrain(&state, 0, 0, 100, 100);
     Terrain *terrain2 = new Terrain(&state, 100, 0, 100, 100);
 
+    int width = 100;
+    int length = 100;
+
     Terrain world[4] = {
-        {&state, 0, 0, 100, 100},
-        {&state, 100, 0, 100, 100},
-        {&state, 0, 100, 100, 100},
-        {&state, 100, 100, 100, 100}
+        {&state, 0, 0, width, length},
+        {&state, 100, 0, width, length},
+        {&state, 0, 100, width, length},
+        {&state, 100, 100, width, length}
     };
     /*CustomModel *cm = new CustomModel("assets/models/untitled.obj");*/
 
@@ -144,6 +147,9 @@ int main() {
     bool updateTerrain = true;
     int frameCount = 0;
     unsigned int frameTime = 0;
+
+    float alterSize = 0.005;
+    float treeChanceThresh = 0.4;
 
     while (!glfwWindowShouldClose(window)) {
         std::chrono::time_point<std::chrono::high_resolution_clock> startFrame = std::chrono::high_resolution_clock::now();
@@ -164,11 +170,14 @@ int main() {
             updatedTerrain = 0;
             int i = 0;
             for (Terrain &t: world) {
+                t.alterSize = alterSize;
+                t.treeChanceThresh = treeChanceThresh;
+
                 t.Update();
 
                 // Here we are updating the mesh that we made
                 t1[i] = std::thread([&updatedTerrain, &t] {
-                    std::cout << "Starting update..." << std::endl;
+                    /*std::cout << "Starting update..." << std::endl;*/
                     t.UpdateTerrain();
                     updatedTerrain++;
                 });
@@ -190,7 +199,7 @@ int main() {
         }
         /*cm->Render();*/
 
-        myimgui.Update(terrain, &updateTerrain);
+        myimgui.Update(&alterSize, &treeChanceThresh, &updateTerrain);
         myimgui.Render();
 
 

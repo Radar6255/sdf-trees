@@ -1,3 +1,4 @@
+set(CMAKE_BUILD_TYPE Debug)
 cmake_minimum_required (VERSION 3.8)
 project("DimensionShooter")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

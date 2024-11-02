@@ -42,8 +42,11 @@ public:
     float treeChanceThresh = 0.4f;
 private:
     unsigned long terrainHeightMapSize;
+    unsigned long arrayLength;
+
     int startX, startY, width, length;
     GLuint VAO;
+    GLuint EBO;
     Vertex *terrainHeightMap;
     /*Vertex terrainHeightMap[NUM_POINTS];*/
     GLuint *buffers;

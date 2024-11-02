@@ -16,15 +16,15 @@ void UseImGui::Init(GLFWwindow* window, const char* glsl_version) {
     ImGui::StyleColorsDark();
 }
 
-void UseImGui::Update(Terrain* terrain, bool* updateTerrain) {
+void UseImGui::Update(float* alterSize, float* treeChanceThresh, bool* updateTerrain) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
     ImGui::Begin("Test");
     ImGui::Text("Magic here");
-    ImGui::SliderFloat("alterSize", &terrain->alterSize, -0.2f, 0.2f);
-    ImGui::SliderFloat("treeChanceThresh", &terrain->treeChanceThresh, 0.1f, 6.0f);
+    ImGui::SliderFloat("alterSize", alterSize, -0.2f, 0.2f);
+    ImGui::SliderFloat("treeChanceThresh", treeChanceThresh, 0.1f, 6.0f);
 
     ImGui::Checkbox("Update Terrain", updateTerrain);
 
