@@ -124,10 +124,17 @@ int main() {
     int width = 100;
     int length = 100;
 
-    Terrain world[4] = {
+    int numTerrains = 9;
+
+    Terrain world[9] = {
         {&state, 0, 0, width, length},
         {&state, 100, 0, width, length},
         {&state, 0, 100, width, length},
+        {&state, 200, 0, width, length},
+        {&state, 200, 100, width, length},
+        {&state, 0, 200, width, length},
+        {&state, 200, 200, width, length},
+        {&state, 100, 200, width, length},
         {&state, 100, 100, width, length}
     };
     /*CustomModel *cm = new CustomModel("assets/models/untitled.obj");*/
@@ -140,38 +147,60 @@ int main() {
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    std::thread t1[4];
+    std::thread t1[numTerrains];
     int iter = 0;
-    std::atomic<short> updatedTerrain(4);
+    std::atomic<short> updatedTerrain(numTerrains);
     int updates = 0;
-    bool updateTerrain = true;
     int frameCount = 0;
     unsigned int frameTime = 0;
 
-    float alterSize = 0.005;
-    float treeChanceThresh = 0.4;
+    int shortFrameCount = 0;
+    uint shortFrameTime = 0;
+
+    int shortUpdateCount = 0;
+    double lastShortUpdate = glfwGetTime();
+
+    GuiData gd;
+    gd.alterSize = 0.005;
+    gd.treeChanceThresh = 0.4;
+    gd.avgRenderTime = 0;
+    gd.updateRate = 0;
+    gd.recentRenderTime = 0;
+    gd.updateTerrain = true;
 
     while (!glfwWindowShouldClose(window)) {
         std::chrono::time_point<std::chrono::high_resolution_clock> startFrame = std::chrono::high_resolution_clock::now();
-        if (updateTerrain && updatedTerrain == 4) {
+        if (shortFrameCount == 600) {
+            std::cout << "Recent average frame time: " << shortFrameTime / 600 << std::endl;
+            shortFrameTime = 0;
+            shortFrameCount = 0;
+        }
+
+        if (gd.updateTerrain && updatedTerrain == numTerrains) {
             // TODO Here I want to update the buffer
             if (iter) {
                 for (std::thread &t: t1) {
                     t.join();
                 }
+                shortUpdateCount++;
+            }
+
+            if (shortUpdateCount == 100) {
+                shortUpdateCount = 0;
+                lastShortUpdate = glfwGetTime();
             }
 
             // This update is to update the buffer
-            std::cout << "Updates per second: " << updates / glfwGetTime() << std::endl;
-            if (frameCount) {
-                std::cout << "Avg FrameTime: " << frameTime / frameCount << std::endl;
-            }
+            /*std::cout << "Updates per second: " << updates / glfwGetTime() << std::endl;*/
+            /*if (frameCount) {*/
+            /*    std::cout << "Avg FrameTime: " << frameTime / frameCount << std::endl;*/
+            /*}*/
 
             updatedTerrain = 0;
             int i = 0;
             for (Terrain &t: world) {
-                t.alterSize = alterSize;
-                t.treeChanceThresh = treeChanceThresh;
+                t.alterSize = gd.alterSize;
+                t.treeChanceThresh = gd.treeChanceThresh;
 
                 t.Update();
 
@@ -199,14 +228,21 @@ int main() {
         }
         /*cm->Render();*/
 
-        myimgui.Update(&alterSize, &treeChanceThresh, &updateTerrain);
+        myimgui.Update(&gd);
         myimgui.Render();
 
 
         glfwSwapBuffers(window);
-        frameTime += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - startFrame).count();
+        uint t = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - startFrame).count();
+        frameTime += t;
         /*std::cout << "Render time: " << std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - startFrame).count() << std::endl;*/
+        shortFrameTime += t;
+        shortFrameCount++;
         frameCount++;
+        gd.recentRenderTime = (float) shortFrameTime / shortFrameCount;
+        gd.avgRenderTime = (float) frameTime / frameCount;
+        gd.updateRate = updates / glfwGetTime();
+        gd.recentUpdateRate = shortUpdateCount / (glfwGetTime() - lastShortUpdate);
     }
     myimgui.Shutdown();
 

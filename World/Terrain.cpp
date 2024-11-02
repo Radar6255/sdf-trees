@@ -84,8 +84,8 @@ noise::module::Perlin treeNoise;
 Terrain::Terrain(GameState* state, int startX, int startY, int width, int length) {
     this->startX = startX;
     this->startY = startY;
-    this->width = width;
-    this->length = length;
+    this->width = width + 1;
+    this->length = length + 1;
 
     long numPoints = this->width * this->length;
     this->terrainHeightMap = new Vertex[numPoints];
@@ -162,6 +162,7 @@ void Terrain::UpdateTerrain() {
 
     // Starting by creating the mesh
     noise::module::Perlin perlinNoise;
+    noise::module::Perlin biomeNoise;
     int i = 0;
     int treeDensity = 4;
 
@@ -179,16 +180,20 @@ void Terrain::UpdateTerrain() {
             glm::vec3 a, b, normal;
             double dydx, dydz;
 
+            float height = HEIGHT * biomeNoise.GetValue(STEP * curX, STEP * curY, this->alter);
+
             // First triangle
             terrainHeightMap[i].Position[0] = curX;
-            terrainHeightMap[i].Position[1] = HEIGHT * perlinNoise.GetValue(STEP * curX, STEP * curY, this->alter);
+            terrainHeightMap[i].Position[1] = height * perlinNoise.GetValue(STEP * curX, STEP * curY, this->alter);
             terrainHeightMap[i].Position[2] = curY;
 
             /*std::cout << "Point: (" << x << ", " << terrainHeightMap[i].Position[1] << ", " << curY << std::endl;*/
+            float heightDydx = HEIGHT * biomeNoise.GetValue(STEP * curX + diffStep, STEP * curY, this->alter);
+            float heightDydz = HEIGHT * biomeNoise.GetValue(STEP * curX, STEP * curY + diffStep, this->alter);
 
             // Need to figure out the slope in x
-            dydx = terrainHeightMap[i].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * curX + diffStep * STEP, STEP * curY, this->alter);
-            dydz = terrainHeightMap[i].Position[1] - HEIGHT * perlinNoise.GetValue(STEP * curX, STEP * curY + diffStep * STEP, this->alter);
+            dydx = terrainHeightMap[i].Position[1] - heightDydx * perlinNoise.GetValue(STEP * curX + diffStep * STEP, STEP * curY, this->alter);
+            dydz = terrainHeightMap[i].Position[1] - heightDydz * perlinNoise.GetValue(STEP * curX, STEP * curY + diffStep * STEP, this->alter);
 
             b = {
                 STEP * diffStep,

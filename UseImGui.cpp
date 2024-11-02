@@ -16,17 +16,22 @@ void UseImGui::Init(GLFWwindow* window, const char* glsl_version) {
     ImGui::StyleColorsDark();
 }
 
-void UseImGui::Update(float* alterSize, float* treeChanceThresh, bool* updateTerrain) {
+void UseImGui::Update(GuiData* gd) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
     ImGui::Begin("Test");
     ImGui::Text("Magic here");
-    ImGui::SliderFloat("alterSize", alterSize, -0.2f, 0.2f);
-    ImGui::SliderFloat("treeChanceThresh", treeChanceThresh, 0.1f, 6.0f);
+    ImGui::SliderFloat("alterSize", &gd->alterSize, -0.2f, 0.2f);
+    ImGui::SliderFloat("treeChanceThresh", &gd->treeChanceThresh, 0.1f, 6.0f);
 
-    ImGui::Checkbox("Update Terrain", updateTerrain);
+    ImGui::Checkbox("Update Terrain", &gd->updateTerrain);
+
+    ImGui::Text("Recent render time: %.1f", gd->recentRenderTime);
+    ImGui::Text("Avg render time: %.1f", gd->avgRenderTime);
+    ImGui::Text("Recent update Rate: %.1f", gd->recentUpdateRate);
+    ImGui::Text("Avg update Rate: %.1f", gd->updateRate);
 
     /*bool clear_color_changed = ImGui::ColorEdit3("clear color", (float*) clear_color)*/
     ImGui::End();
