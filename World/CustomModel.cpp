@@ -23,7 +23,7 @@ CustomModel::CustomModel(const char* location) {
 }
 
 void CustomModel::processNode(aiNode *node, const aiScene *scene) {
-    std::cout << "Num meshes: " << node->mNumMeshes << std::endl;
+    /*std::cout << "Num meshes: " << node->mNumMeshes << std::endl;*/
     // process all the node's meshes (if any)
     for(unsigned int i = 0; i < node->mNumMeshes; i++)
     {
@@ -59,7 +59,7 @@ Mesh CustomModel::processMesh(aiMesh *mesh, const aiScene *scene) {
 
     std::vector<unsigned int> indicies;
 
-    std::cout << "Num faces: " << mesh->mNumFaces << std::endl;
+    /*std::cout << "Num faces: " << mesh->mNumFaces << std::endl;*/
     for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
         aiFace face = mesh->mFaces[i];
 
@@ -77,13 +77,13 @@ Mesh CustomModel::processMesh(aiMesh *mesh, const aiScene *scene) {
 }
 
 void CustomModel::Render(Program* program, glm::vec3 pos, float xrot, float yrot) {
-    for (Mesh t : meshes) {
+    for (Mesh &t : meshes) {
         t.Draw(program, pos, xrot, yrot);
     }
 }
 
 void CustomModel::Render() {
-    for (Mesh t : meshes) {
+    for (Mesh &t : meshes) {
         t.Draw();
     }
 }

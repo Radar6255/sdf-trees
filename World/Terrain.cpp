@@ -180,16 +180,19 @@ void Terrain::UpdateTerrain() {
             glm::vec3 a, b, normal;
             double dydx, dydz;
 
-            float height = HEIGHT * biomeNoise.GetValue(STEP * curX, STEP * curY, this->alter);
+            /*float height = HEIGHT * biomeNoise.GetValue(STEP * curX, STEP * curY, this->alter);*/
+            float height = HEIGHT;
 
             // First triangle
             terrainHeightMap[i].Position[0] = curX;
-            terrainHeightMap[i].Position[1] = height * perlinNoise.GetValue(STEP * curX, STEP * curY, this->alter);
+            terrainHeightMap[i].Position[1] = HEIGHT * perlinNoise.GetValue(STEP * curX, STEP * curY, this->alter);
             terrainHeightMap[i].Position[2] = curY;
 
             /*std::cout << "Point: (" << x << ", " << terrainHeightMap[i].Position[1] << ", " << curY << std::endl;*/
-            float heightDydx = HEIGHT * biomeNoise.GetValue(STEP * curX + diffStep, STEP * curY, this->alter);
-            float heightDydz = HEIGHT * biomeNoise.GetValue(STEP * curX, STEP * curY + diffStep, this->alter);
+            /*float heightDydx = HEIGHT * biomeNoise.GetValue(STEP * curX + diffStep, STEP * curY, this->alter);*/
+            /*float heightDydz = HEIGHT * biomeNoise.GetValue(STEP * curX, STEP * curY + diffStep, this->alter);*/
+            float heightDydx = HEIGHT;
+            float heightDydz = HEIGHT;
 
             // Need to figure out the slope in x
             dydx = terrainHeightMap[i].Position[1] - heightDydx * perlinNoise.GetValue(STEP * curX + diffStep * STEP, STEP * curY, this->alter);
@@ -259,10 +262,10 @@ float Terrain::generateTree(int x, int curY, int i, float alter, noise::module::
     /*return false;*/
 }
 
-void Terrain::Render(Program* program) {
+void Terrain::Render(Shaders* shaders) {
     glm::mat4 model = glm::mat4(1);
 
-    GLuint modelLoc = glGetUniformLocation(program->program, "model");
+    GLuint modelLoc = glGetUniformLocation(shaders->terrainShader->program, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glBindVertexArray(this->VAO);
     /*glDrawArrays(GL_TRIANGLE_STRIP, 0, this->terrainHeightMapSize / sizeof(Vertex));*/
@@ -272,6 +275,6 @@ void Terrain::Render(Program* program) {
         // TODO Need to draw a tree here at a specific point
         /*std::cout << "Tree: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;*/
         /*this->trees[td.variation]->Render(program, td.pos, td.xrot, td.yrot);*/
-        this->trees[0]->Render(program, td.pos, td.xrot, td.yrot);
+        this->trees[0]->Render(shaders->treeShader, td.pos, td.xrot, td.yrot);
     }
 }

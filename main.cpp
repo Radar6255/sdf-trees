@@ -112,8 +112,11 @@ int main() {
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(MessageCallback, NULL);
 
-    Program *program = new Program("./shaders/fragShader.glsl", "./shaders/vertShader.glsl");
-    glUseProgram(program->program);
+    Program *terrainProgram = new Program("./shaders/fragShader.glsl", "./shaders/vertShader.glsl");
+    glUseProgram(terrainProgram->program);
+    Program *treeProgram = new Program("./shaders/treeFragShader.glsl", "./shaders/treeVertShader.glsl");
+
+    Shaders shaders = {terrainProgram, treeProgram};
 
     glEnable(GL_DEPTH_TEST);
 
@@ -124,22 +127,34 @@ int main() {
     int width = 100;
     int length = 100;
 
-    int numTerrains = 9;
+    int size = 4;
+    int chunkSize = 100;
+    int numTerrains = size * size;
 
-    Terrain world[9] = {
-        {&state, 0, 0, width, length},
-        {&state, 100, 0, width, length},
-        {&state, 0, 100, width, length},
-        {&state, 200, 0, width, length},
-        {&state, 200, 100, width, length},
-        {&state, 0, 200, width, length},
-        {&state, 200, 200, width, length},
-        {&state, 100, 200, width, length},
-        {&state, 100, 100, width, length}
-    };
+
+    /*Terrain world[9] = {*/
+    /*    {&state, 0, 0, width, length},*/
+    /*    {&state, 100, 0, width, length},*/
+    /*    {&state, 0, 100, width, length},*/
+    /*    {&state, 200, 0, width, length},*/
+    /*    {&state, 200, 100, width, length},*/
+    /*    {&state, 0, 200, width, length},*/
+    /*    {&state, 200, 200, width, length},*/
+    /*    {&state, 100, 200, width, length},*/
+    /*    {&state, 100, 100, width, length}*/
+    /*};*/
+
+    Terrain** world = new Terrain*[size * size];
+
+    for (int x = 0; x < size; x++) {
+        for (int y = 0; y < size; y++) {
+            world[x + y * size] = new Terrain(&state, x * chunkSize, y * chunkSize, chunkSize, chunkSize);
+        }
+    }
+
     /*CustomModel *cm = new CustomModel("assets/models/untitled.obj");*/
 
-    cam = new Camera(program, &state);
+    cam = new Camera(&shaders, &state);
 
     // Registering key callbacks to handle input
     // Register in the key_callback function
@@ -198,16 +213,18 @@ int main() {
 
             updatedTerrain = 0;
             int i = 0;
-            for (Terrain &t: world) {
-                t.alterSize = gd.alterSize;
-                t.treeChanceThresh = gd.treeChanceThresh;
+            for (int ti = 0; ti < size * size; ti++) {
+                Terrain *t = world[ti];
 
-                t.Update();
+                t->alterSize = gd.alterSize;
+                t->treeChanceThresh = gd.treeChanceThresh;
+
+                t->Update();
 
                 // Here we are updating the mesh that we made
-                t1[i] = std::thread([&updatedTerrain, &t] {
+                t1[i] = std::thread([&updatedTerrain, t] {
                     /*std::cout << "Starting update..." << std::endl;*/
-                    t.UpdateTerrain();
+                    t->UpdateTerrain();
                     updatedTerrain++;
                 });
                 i++;
@@ -223,9 +240,11 @@ int main() {
         /*cube->Render();*/
         /*terrain->Render(program);*/
         /*terrain2->Render(program);*/
-        for (Terrain t : world) {
-            t.Render(program);
+        for (int ti = 0; ti < size * size; ti++) {
+        /*for (Terrain t : world) {*/
+            world[ti]->Render(&shaders);
         }
+
         /*cm->Render();*/
 
         myimgui.Update(&gd);

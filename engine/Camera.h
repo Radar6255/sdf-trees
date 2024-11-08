@@ -7,7 +7,7 @@
 
 class Camera {
 public:
-    Camera(Program* program, GameState* state);
+    Camera(Shaders* shaders, GameState* state);
 
     // This function is to update the transformation matricies
     void Update(GLFWwindow* window);

@@ -34,7 +34,7 @@ public:
 class Terrain {
 public:
     Terrain(GameState* state, int startX, int startY, int width, int length);
-    void Render(Program* program);
+    void Render(Shaders* shaders);
     void Update();
     void UpdateTerrain();
     void setUpdateSize(float alter);

@@ -1,4 +1,5 @@
 #include "Camera.h"
+#include "Program.h"
 
 #include <GLFW/glfw3.h>
 #include <cmath>
@@ -14,11 +15,11 @@
 #include <iostream>
 #include <ostream>
 
-Camera::Camera(Program* program, GameState* state) {
+Camera::Camera(Shaders* shaders, GameState* state) {
     this->state = state;
-    this->modelLoc = glGetUniformLocation(program->program, "model");
-    this->viewLoc = glGetUniformLocation(program->program, "view");
-    this->perspectiveLoc = glGetUniformLocation(program->program, "projection");
+    this->modelLoc = glGetUniformLocation(shaders->terrainShader->program, "model");
+    this->viewLoc = glGetUniformLocation(shaders->terrainShader->program, "view");
+    this->perspectiveLoc = glGetUniformLocation(shaders->terrainShader->program, "projection");
 
     this->pos = glm::vec3(0.0f, 10.0f, 0.0f);
     this->xrot = 2.0f;

@@ -62,6 +62,8 @@ void Mesh::Draw(Program* program, glm::vec3 pos, float xrot, float yrot) {
     model = glm::rotate(model, glm::degrees(xrot), {0.0, 1.0, 0.0});
     model = glm::rotate(model, glm::degrees(yrot), {0.0, 0.0, 1.0});
 
+    glUseProgram(program->program);
+
     GLuint modelLoc = glGetUniformLocation(program->program, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 

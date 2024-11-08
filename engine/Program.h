@@ -11,3 +11,9 @@ public:
 private:
     void Init(const char* fragShader, const char* geoShader, const char* vertShader);
 };
+
+class Shaders {
+public:
+    Program* terrainShader;
+    Program* treeShader;
+};
