@@ -32,4 +32,5 @@ private:
     bool down = false;
 
     GameState* state;
+    Shaders* shaders;
 };

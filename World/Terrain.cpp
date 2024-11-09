@@ -265,6 +265,7 @@ float Terrain::generateTree(int x, int curY, int i, float alter, noise::module::
 void Terrain::Render(Shaders* shaders) {
     glm::mat4 model = glm::mat4(1);
 
+    glUseProgram(shaders->terrainShader->program);
     GLuint modelLoc = glGetUniformLocation(shaders->terrainShader->program, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glBindVertexArray(this->VAO);

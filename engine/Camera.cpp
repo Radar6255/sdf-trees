@@ -16,6 +16,7 @@
 #include <ostream>
 
 Camera::Camera(Shaders* shaders, GameState* state) {
+    this->shaders = shaders;
     this->state = state;
     this->modelLoc = glGetUniformLocation(shaders->terrainShader->program, "model");
     this->viewLoc = glGetUniformLocation(shaders->terrainShader->program, "view");
@@ -68,6 +69,12 @@ void Camera::Update(GLFWwindow* window) {
     // Setting up perspective matrix
     glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
 
+    glUseProgram(this->shaders->treeShader->program);
+    glUniformMatrix4fv(this->modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(this->viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(this->perspectiveLoc, 1, GL_FALSE, glm::value_ptr(proj));
+
+    glUseProgram(this->shaders->terrainShader->program);
     glUniformMatrix4fv(this->modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(this->viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(this->perspectiveLoc, 1, GL_FALSE, glm::value_ptr(proj));

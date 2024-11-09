@@ -116,6 +116,29 @@ int main() {
     glUseProgram(terrainProgram->program);
     Program *treeProgram = new Program("./shaders/treeFragShader.glsl", "./shaders/treeVertShader.glsl");
 
+    Program *testProgram = new Program("./shaders/compShader.glsl");
+    Program *testRenderProgram = new Program("./shaders/testFragShader.glsl", "./shaders/testVertShader.glsl");
+
+    // TODO Here generate a buffer for testing...
+    glm::vec3 data[2];
+
+    int in = 0;
+    /*for (int x = 0; x < 10; x++) {*/
+    /*    for (int y = 0; y < 10; y++) {*/
+    /*        data[in] = x * y;*/
+    /*        in++;*/
+    /*    }*/
+    /*}*/
+    data[0] = {0, 0, 0};
+    data[1] = {0, 1, 0};
+
+    GLuint ssbo;
+    glGenBuffers(1, &ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(data), data, GL_DYNAMIC_STORAGE_BIT);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
     Shaders shaders = {terrainProgram, treeProgram};
 
     glEnable(GL_DEPTH_TEST);
@@ -130,19 +153,6 @@ int main() {
     int size = 4;
     int chunkSize = 100;
     int numTerrains = size * size;
-
-
-    /*Terrain world[9] = {*/
-    /*    {&state, 0, 0, width, length},*/
-    /*    {&state, 100, 0, width, length},*/
-    /*    {&state, 0, 100, width, length},*/
-    /*    {&state, 200, 0, width, length},*/
-    /*    {&state, 200, 100, width, length},*/
-    /*    {&state, 0, 200, width, length},*/
-    /*    {&state, 200, 200, width, length},*/
-    /*    {&state, 100, 200, width, length},*/
-    /*    {&state, 100, 100, width, length}*/
-    /*};*/
 
     Terrain** world = new Terrain*[size * size];
 
@@ -233,6 +243,10 @@ int main() {
         }
         iter++;
 
+        glUseProgram(testProgram->program);
+        glDispatchCompute(1, 1, 0);
+
+        glUseProgram(terrainProgram->program);
         glfwPollEvents();
         cam->Update(window);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

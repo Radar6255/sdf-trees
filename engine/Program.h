@@ -5,7 +5,8 @@
 class Program {
 public:
     Program(const char* fragShader, const char* vertShader);
-    Program(const char* fragShader, const char* geoShader, const char* vertShader);
+    Program(const char* fragShaderStr, const char* geoShaderStr, const char* vertShaderStr);
+    Program(const char* computeShaderStr);
 
     GLuint program;
 private:
