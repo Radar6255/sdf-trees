@@ -12,6 +12,7 @@
 #include <GL/gl.h>
 #include <atomic>
 #include <chrono>
+#include <glm/ext/vector_float3.hpp>
 #include <imgui_impl_glfw.h>
 #include <iostream>
 #include <ostream>
@@ -116,6 +117,8 @@ int main() {
     glUseProgram(terrainProgram->program);
     Program *treeProgram = new Program("./shaders/treeFragShader.glsl", "./shaders/treeVertShader.glsl");
 
+
+    // START TESTING
     Program *testProgram = new Program("./shaders/compShader.glsl");
     Program *testRenderProgram = new Program("./shaders/testFragShader.glsl", "./shaders/testVertShader.glsl");
 
@@ -123,23 +126,79 @@ int main() {
     glm::vec3 data[2];
 
     int in = 0;
-    /*for (int x = 0; x < 10; x++) {*/
-    /*    for (int y = 0; y < 10; y++) {*/
-    /*        data[in] = x * y;*/
-    /*        in++;*/
-    /*    }*/
-    /*}*/
     data[0] = {0, 0, 0};
     data[1] = {0, 1, 0};
 
-    GLuint ssbo;
-    glGenBuffers(1, &ssbo);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(data), data, GL_DYNAMIC_STORAGE_BIT);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
+    glm::vec3 out[1000];
+
+    glUseProgram(testProgram->program);
+    GLuint outIndex = glGetUniformLocation(testProgram->program, "outIndex");
+    glUniform1ui(outIndex, 0);
+
+    /*GLuint ssbo;*/
+    /*glGenBuffers(1, &ssbo);*/
+    /*glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);*/
+    /*glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(data), data, GL_DYNAMIC_COPY);*/
+    /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);*/
+    /*glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);*/
+
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+
+    GLuint ssboOut;
+    glGenBuffers(1, &ssboOut);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOut);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(out), out, GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboOut);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    Shaders shaders = {terrainProgram, treeProgram};
+    glm::vec3 outIndicies[20000];
+    GLuint ssboOutIndicies;
+    glGenBuffers(1, &ssboOutIndicies);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOutIndicies);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(outIndicies), outIndicies, GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboOutIndicies);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    struct OutData {
+        GLuint outIndex;
+    } outData;
+    outData.outIndex = 0;
+
+    GLuint ssboOutData;
+    glGenBuffers(1, &ssboOutData);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, ssboOutData);
+    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(struct OutData), &outData, GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 2, ssboOutData);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
+
+    glDispatchCompute(1, 1, 1);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    glUseProgram(testRenderProgram->program);
+    glBindVertexArray(vao);
+
+    /*glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOut);*/
+    /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboOut);*/
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOutIndicies);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboOutIndicies);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    /*glBindBuffer(GL_ARRAY_BUFFER, ssboOut);*/
+    /*glBindBufferBase(GL_ARRAY_BUFFER, 0, ssboOut);*/
+    /*glBindBuffer(GL_ARRAY_BUFFER, 0);*/
+
+    //glEnableVertexAttribArray(0);
+    glBindVertexArray(0);
+    // END TESTING
+
+
+    Shaders shaders; // = {terrainProgram, treeProgram};
+    shaders.shaderList[TERRAIN_SHADER] = terrainProgram;
+    shaders.shaderList[TREE_SHADER] = treeProgram;
+    shaders.shaderList[TEST_SHADER] = testRenderProgram;
 
     glEnable(GL_DEPTH_TEST);
 
@@ -150,7 +209,7 @@ int main() {
     int width = 100;
     int length = 100;
 
-    int size = 4;
+    int size = 1;
     int chunkSize = 100;
     int numTerrains = size * size;
 
@@ -243,21 +302,20 @@ int main() {
         }
         iter++;
 
-        glUseProgram(testProgram->program);
-        glDispatchCompute(1, 1, 0);
-
         glUseProgram(terrainProgram->program);
         glfwPollEvents();
         cam->Update(window);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        /*cube->Render();*/
-        /*terrain->Render(program);*/
-        /*terrain2->Render(program);*/
         for (int ti = 0; ti < size * size; ti++) {
-        /*for (Terrain t : world) {*/
-            world[ti]->Render(&shaders);
+            /*world[ti]->Render(&shaders);*/
         }
+
+        glUseProgram(testRenderProgram->program);
+        glBindVertexArray(vao);
+        glPointSize(3);
+        /*glDrawArrays(GL_POINTS, 0, 4000);*/
+        glDrawArrays(GL_TRIANGLES, 0, 4000);
 
         /*cm->Render();*/
 

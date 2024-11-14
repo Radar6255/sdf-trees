@@ -265,8 +265,8 @@ float Terrain::generateTree(int x, int curY, int i, float alter, noise::module::
 void Terrain::Render(Shaders* shaders) {
     glm::mat4 model = glm::mat4(1);
 
-    glUseProgram(shaders->terrainShader->program);
-    GLuint modelLoc = glGetUniformLocation(shaders->terrainShader->program, "model");
+    glUseProgram(shaders->shaderList[TERRAIN_SHADER]->program);
+    GLuint modelLoc = glGetUniformLocation(shaders->shaderList[TERRAIN_SHADER]->program, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glBindVertexArray(this->VAO);
     /*glDrawArrays(GL_TRIANGLE_STRIP, 0, this->terrainHeightMapSize / sizeof(Vertex));*/
@@ -276,6 +276,6 @@ void Terrain::Render(Shaders* shaders) {
         // TODO Need to draw a tree here at a specific point
         /*std::cout << "Tree: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;*/
         /*this->trees[td.variation]->Render(program, td.pos, td.xrot, td.yrot);*/
-        this->trees[0]->Render(shaders->treeShader, td.pos, td.xrot, td.yrot);
+        this->trees[0]->Render(shaders->shaderList[TREE_SHADER], td.pos, td.xrot, td.yrot);
     }
 }
