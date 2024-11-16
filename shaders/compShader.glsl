@@ -21,6 +21,8 @@ shared uint outIndexIndex;
 shared vec3 outData[1000];
 shared int indicies[11][11][11];
 
+shared uint currIndex = 0;
+
 // SDF from https://iquilezles.org/articles/distfunctions/
 float sdVerticalCapsule( vec3 p, float h, float r ) {
   p.y -= clamp( p.y, 0.0, h );
@@ -42,7 +44,7 @@ void main() {
     vec3 pos = {-0.5, 0, -0.5};
     //vec3 pos = {0.0, 0.0, 0.0};
 
-    float r = 0.25;
+    float r = 0.20;
     float height = 1;
 
     // TODO Start by calculating all of the sdf values
@@ -134,14 +136,7 @@ void main() {
             //outIndicies[ta] = ps;
 
             intersectionsSum += ps;
-            //intersectionsSum.x =+ ps.x;
-            //intersectionsSum.y =+ ps.y;
-            //intersectionsSum.z =+ ps.z;
             numIntersections++;
-
-            //uint t = atomicCounterIncrement(outIndex);
-            //outData[t] = ps;
-            //outIndicies[t] = ps;
         }
     }
 
@@ -157,13 +152,12 @@ void main() {
         //uint ta = outIndexIndex++;
 
         // TODO Need to add this to the output somewhere
-        uint outIndexCurr = atomicCounterIncrement(outIndex);
+        //uint outIndexCurr = atomicCounterIncrement(outIndex);
+        uint outIndexCurr = atomicAdd(currIndex, 1);
         outData[outIndexCurr] = avgPoint;
 
         //uint t = atomicCounterAdd(outIndex, uint(1));
         //outDataOld[t] = avgPoint;
-
-        //outIndicies[outIndexCurr] = avgPoint;
 
         indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z) - 1] = int(outIndexCurr);
     } else {
