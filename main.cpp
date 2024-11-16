@@ -145,12 +145,35 @@ int main() {
     GLuint vao;
     glGenVertexArrays(1, &vao);
 
-    GLuint ssboOut;
-    glGenBuffers(1, &ssboOut);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOut);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(out), out, GL_DYNAMIC_COPY);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboOut);
+    /*layout(std430, binding = 0) buffer treeDetails {*/
+    /*    readonly restrict vec3 branches[30];*/
+    /*    readonly restrict uint numBranches;*/
+    /*};*/
+
+    struct TreeDetails {
+        glm::vec3 branches[30];
+        GLuint numBranches;
+    } td;
+
+    glm::vec3 branches[30];
+    branches[0] = {0, 0, 0};
+    branches[1] = {0, 0.4, 0};
+    branches[2] = {0, 0.4, 0};
+    branches[3] = {0.2, 0.6, 0};
+    branches[4] = {0, 0.4, 0};
+    branches[5] = {-0.1, 0.7, 0.3};
+
+    td.numBranches = 3;
+
+    GLuint treeBufferObject;
+    glGenBuffers(1, &treeBufferObject);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeBufferObject);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(struct TreeDetails), &td, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, treeBufferObject);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    glUniform1ui(3, 3);
+    glUniform3fv(4, 30, (const GLfloat*)branches);
 
     glm::vec3 outIndicies[20000];
     GLuint ssboOutIndicies;
@@ -160,19 +183,7 @@ int main() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboOutIndicies);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    struct OutData {
-        GLuint outIndex;
-    } outData;
-    outData.outIndex = 0;
-
-    GLuint ssboOutData;
-    glGenBuffers(1, &ssboOutData);
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, ssboOutData);
-    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(struct OutData), &outData, GL_DYNAMIC_COPY);
-    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 2, ssboOutData);
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
-
-    glDispatchCompute(1, 2, 1);
+    glDispatchCompute(1, 3, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     glUseProgram(testRenderProgram->program);

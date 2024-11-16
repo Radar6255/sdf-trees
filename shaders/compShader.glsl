@@ -9,16 +9,26 @@ layout(local_size_x = 10, local_size_y = 10, local_size_z = 10) in;
 //layout(std430, binding = 0) buffer layoutName {
 //    readonly vec3 data[2];
 //};
-layout(binding = 2) uniform atomic_uint outIndex;
+struct TreeDetails {
+    vec3 branches[30];
+    uint numBranches;
+};
+//layout(std430, binding = 0) buffer treeDetails {
+//    readonly restrict vec3 branches[30];
+//    readonly restrict uint numBranches;
+//};
+layout(location = 3) uniform uint numBranches;
+layout(location = 4) uniform vec3 branches[30];
 layout(std430, binding = 1) buffer outputIndiciesBuff {
     writeonly restrict vec3 outIndicies[];
 };
 
 //shared uint outIndex;
-shared vec3 outData[1000];
+shared vec3 outData[2000];
 shared int indicies[11][11][11];
 
-shared uint currIndex = 0;
+shared uint outIndex;
+shared uint currIndex;
 
 // SDF from https://iquilezles.org/articles/distfunctions/
 float sdVerticalCapsule( vec3 p, float h, float r ) {
@@ -32,8 +42,29 @@ float sdCapsule( vec3 p, vec3 a, vec3 b, float r ) {
   return length( pa - ba*h ) - r;
 }
 
+float calcSdf(vec3 p) {
+    float r = 0.23;
+    //r = 0.1;
+    float min = 10000;
+
+    for (uint i = 0; i < 2 * numBranches; i += 2) {
+        float t = sdCapsule(p, branches[i], branches[i + 1], r);
+        if (t < min) {
+            min = t;
+        }
+    }
+
+    //return sdVerticalCapsule(p, 0.5, r);
+    //return sdCapsule(p, vec3(0, 0, 0), vec3(0, 0.5, 0), r);
+    return min;
+}
+
 shared float sdfValue[11][11][11];
 void main() {
+    if (gl_LocalInvocationID == vec3(0, 0, 0)) {
+        outIndex = 0;
+        currIndex = 0;
+    }
     vec3 curIndex = gl_LocalInvocationID + vec3(1, 1, 1);
     vec3 curPos = gl_GlobalInvocationID - vec3(0, gl_WorkGroupID.y, 0);
 
@@ -46,24 +77,29 @@ void main() {
 
     // TODO Start by calculating all of the sdf values
     vec3 p1 = curPos * def + pos;
-    sdfValue[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)] = sdVerticalCapsule(p1, height, r);
+    sdfValue[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)] = calcSdf(p1);
 
     if (gl_LocalInvocationID.x == 0) {
         vec3 p1 = (curPos - vec3(1, 0, 0)) * def + pos;
-        sdfValue[0][int(curIndex.y)][int(curIndex.z)] = sdVerticalCapsule(p1, height, r);
+        sdfValue[0][int(curIndex.y)][int(curIndex.z)] = calcSdf(p1);
     }
     if (gl_LocalInvocationID.y == 0) {
         vec3 p1 = (curPos - vec3(0, 1, 0)) * def + pos;
-        sdfValue[int(curIndex.x)][0][int(curIndex.z)] = sdVerticalCapsule(p1, height, r);
+        sdfValue[int(curIndex.x)][0][int(curIndex.z)] = calcSdf(p1);
     }
     if (gl_LocalInvocationID.z == 0) {
         vec3 p1 = (curPos - vec3(0, 0, 1)) * def + pos;
-        sdfValue[int(curIndex.x)][int(curIndex.y)][0] = sdVerticalCapsule(p1, height, r);
+        sdfValue[int(curIndex.x)][int(curIndex.y)][0] = calcSdf(p1);
     }
 
     // Making sure that all of the SDF values have been calculated first
     barrier();
 
+    vec3 axes[] = {
+        {0.0, 0.0, 1.0},
+        {1.0, 0.0, 0.0},
+        {0.0, 1.0, 0.0},
+    };
 
     vec3 comparisons[] = {
 //        {0.0, 0.0, 0.0},
@@ -113,6 +149,7 @@ void main() {
 
     int numIntersections = 0;
     vec3 intersectionsSum = vec3(0.0, 0.0, 0.0);
+    vec3 normal = vec3(0.0, 0.0, 0.0);
     for (int i = 0; i < 24; i+=2) {
         // Here we are offseting by -1 in all dimensions so we can generate the points at 0, 0, 0
         // The faces connect into the negative direction
@@ -135,6 +172,8 @@ void main() {
             intersectionsSum += ps;
             numIntersections++;
         }
+
+        normal += axes[int(floor(i / 8))] * (d1 - d2);
     }
 
     if (numIntersections != 0) {
@@ -147,14 +186,12 @@ void main() {
 
         // TODO Need to add this to the output somewhere
         //uint outIndexCurr = atomicCounterIncrement(outIndex);
-        uint outIndexCurr = atomicAdd(currIndex, 1);
+        uint outIndexCurr = atomicAdd(currIndex, 2);
         outData[outIndexCurr] = avgPoint;
+        outData[outIndexCurr+1] = normal;
 
         indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z) - 1] = int(outIndexCurr);
     } else {
-        //uint outIndexCurr = atomicCounterIncrement(outIndex);
-        //uint outIndexCurr = outIndex++;
-        //outData[outIndexCurr] = vec3(0.0, 0.0, 0.0);
         indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z) - 1] = -1;
     }
 
@@ -168,11 +205,6 @@ void main() {
     if (gl_LocalInvocationID.x == 9 || gl_LocalInvocationID.y == 9 || gl_LocalInvocationID.z == 9) {
         return;
     }
-    vec3 axes[] = {
-        {1.0, 0.0, 0.0},
-        {0.0, 1.0, 0.0},
-        {0.0, 0.0, 1.0},
-    };
 
     if (indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)] != -1) {
         //vec3 p1 = gl_LocalInvocationID * def + pos;
@@ -200,14 +232,20 @@ void main() {
                         continue;
                     }
 
-                    t = atomicCounterAdd(outIndex, uint(6));
+                    t = atomicAdd(outIndex, uint(12));
                     outIndicies[t] = outData[i1];
-                    outIndicies[t+1] = outData[i2];
-                    outIndicies[t+2] = outData[i3];
-
-                    outIndicies[t+3] = outData[i2];
+                    outIndicies[t+1] = outData[i1+1];
+                    outIndicies[t+2] = outData[i2];
+                    outIndicies[t+3] = outData[i2+1];
                     outIndicies[t+4] = outData[i3];
-                    outIndicies[t+5] = outData[i4];
+                    outIndicies[t+5] = outData[i3+1];
+
+                    outIndicies[t+6] = outData[i2];
+                    outIndicies[t+7] = outData[i2+1];
+                    outIndicies[t+8] = outData[i3];
+                    outIndicies[t+9] = outData[i3+1];
+                    outIndicies[t+10] = outData[i4];
+                    outIndicies[t+11] = outData[i4+1];
 
                 } else if (int(axes[i].y) == 1) {
                     int i1 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
@@ -218,14 +256,20 @@ void main() {
                         continue;
                     }
 
-                    t = atomicCounterAdd(outIndex, uint(6));
+                    t = atomicAdd(outIndex, uint(12));
                     outIndicies[t] = outData[i1];
-                    outIndicies[t+1] = outData[i2];
-                    outIndicies[t+2] = outData[i3];
-
-                    outIndicies[t+3] = outData[i2];
+                    outIndicies[t+1] = outData[i1+1];
+                    outIndicies[t+2] = outData[i2];
+                    outIndicies[t+3] = outData[i2+1];
                     outIndicies[t+4] = outData[i3];
-                    outIndicies[t+5] = outData[i4];
+                    outIndicies[t+5] = outData[i3+1];
+
+                    outIndicies[t+6] = outData[i2];
+                    outIndicies[t+7] = outData[i2+1];
+                    outIndicies[t+8] = outData[i3];
+                    outIndicies[t+9] = outData[i3+1];
+                    outIndicies[t+10] = outData[i4];
+                    outIndicies[t+11] = outData[i4+1];
                 } else if (int(axes[i].z) == 1) {
                     int i1 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
                     int i2 = indicies[int(curIndex.x)][int(curIndex.y) - 1][int(curIndex.z)];
@@ -235,14 +279,20 @@ void main() {
                         continue;
                     }
 
-                    t = atomicCounterAdd(outIndex, uint(6));
+                    t = atomicAdd(outIndex, uint(12));
                     outIndicies[t] = outData[i1];
-                    outIndicies[t+1] = outData[i2];
-                    outIndicies[t+2] = outData[i3];
-
-                    outIndicies[t+3] = outData[i2];
+                    outIndicies[t+1] = outData[i1+1];
+                    outIndicies[t+2] = outData[i2];
+                    outIndicies[t+3] = outData[i2+1];
                     outIndicies[t+4] = outData[i3];
-                    outIndicies[t+5] = outData[i4];
+                    outIndicies[t+5] = outData[i3+1];
+
+                    outIndicies[t+6] = outData[i2];
+                    outIndicies[t+7] = outData[i2+1];
+                    outIndicies[t+8] = outData[i3];
+                    outIndicies[t+9] = outData[i3+1];
+                    outIndicies[t+10] = outData[i4];
+                    outIndicies[t+11] = outData[i4+1];
                 }
             }
         }

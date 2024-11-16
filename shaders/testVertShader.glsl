@@ -15,11 +15,23 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
-//out vec3 norm;
+out vec3 color;
 
 void main() {
     //gl_Position = vec4(vertexPosition, 1.0);
-    gl_Position = projection * view * model * vec4(vertexPosition[gl_VertexID], 1.0);
+    gl_Position = projection * view * model * vec4(vertexPosition[2 * gl_VertexID], 1.0);
+
+    //color = vec3(0.2, 0.2, 0.2 + gl_Position.x);
+
+    if (gl_VertexID % 3 == 0) {
+        color = vec3(1, 0, 0);
+    } else if (gl_VertexID % 3 == 1) {
+        color = vec3(0, 1, 0);
+    } else {
+        color = vec3(0, 0, 1);
+    }
+
+    color = vertexPosition[2 * gl_VertexID + 1];
 
     //gl_Position = projection * view * model * vec4(vertexPosition, 1.0);
     //norm = (vec4(vertexNormal, 1.0)).xyz;
