@@ -35,34 +35,34 @@ float sdCapsule( vec3 p, vec3 a, vec3 b, float r ) {
 
 shared float sdfValue[11][11][11];
 void main() {
-//    vec3 curIndex = gl_LocalInvocationID + vec3(1, 1, 1);
+    vec3 curIndex = gl_LocalInvocationID + vec3(1, 1, 1);
+    vec3 curPos = gl_GlobalInvocationID;
 
     float def = 0.1;
     vec3 pos = {-0.5, 0, -0.5};
     //vec3 pos = {0.0, 0.0, 0.0};
 
+    float r = 0.25;
+    float height = 1;
 
     // TODO Start by calculating all of the sdf values
-    vec3 p1 = gl_LocalInvocationID * def + pos;
-    sdfValue[gl_LocalInvocationID.x][gl_LocalInvocationID.y][gl_LocalInvocationID.z] = sdVerticalCapsule(p1, 0.7, 0.2);
+    vec3 p1 = curPos * def + pos;
+    sdfValue[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)] = sdVerticalCapsule(p1, height, r);
 
     barrier();
 
-    // Getting rid of the threads at the boundaries, they won't have all of the points they need anyways
-    if (gl_LocalInvocationID.x == 9 || gl_LocalInvocationID.y == 9 || gl_LocalInvocationID.z == 9) {
-        return;
+
+    if (gl_LocalInvocationID.x == 0) {
+        vec3 p1 = (curPos - vec3(1, 0, 0)) * def + pos;
+        sdfValue[0][int(curIndex.y)][int(curIndex.z)] = sdVerticalCapsule(p1, height, r);
     }
-    if (gl_LocalInvocationID.x == 9) {
-        vec3 p1 = (gl_LocalInvocationID + vec3(1, 0, 0)) * def + pos;
-        sdfValue[gl_LocalInvocationID.x + 1][gl_LocalInvocationID.y][gl_LocalInvocationID.z] = sdVerticalCapsule(p1, 1, 0.4);
+    if (gl_LocalInvocationID.y == 0) {
+        vec3 p1 = (curPos - vec3(0, 1, 0)) * def + pos;
+        sdfValue[int(curIndex.x)][0][int(curIndex.z)] = sdVerticalCapsule(p1, height, r);
     }
-    if (gl_LocalInvocationID.y == 9) {
-        vec3 p1 = (gl_LocalInvocationID + vec3(0, 1, 0)) * def + pos;
-        sdfValue[gl_LocalInvocationID.x][gl_LocalInvocationID.y + 1][gl_LocalInvocationID.z] = sdVerticalCapsule(p1, 1, 0.4);
-    }
-    if (gl_LocalInvocationID.z == 9) {
-        vec3 p1 = (gl_LocalInvocationID + vec3(0, 0, 1)) * def + pos;
-        sdfValue[gl_LocalInvocationID.x + 1][gl_LocalInvocationID.y][gl_LocalInvocationID.z + 1] = sdVerticalCapsule(p1, 1, 0.4);
+    if (gl_LocalInvocationID.z == 0) {
+        vec3 p1 = (curPos - vec3(0, 0, 1)) * def + pos;
+        sdfValue[int(curIndex.x)][int(curIndex.y)][0] = sdVerticalCapsule(p1, height, r);
     }
 
     vec3 comparisons[] = {
@@ -114,12 +114,14 @@ void main() {
     int numIntersections = 0;
     vec3 intersectionsSum = vec3(0.0, 0.0, 0.0);
     for (int i = 0; i < 24; i+=2) {
-        vec3 p1 = (gl_LocalInvocationID + comparisons[i]) * def + pos;
-        vec3 p2 = (gl_LocalInvocationID + comparisons[i + 1]) * def + pos;
+        vec3 p1 = (curPos - vec3(1, 1, 1) + comparisons[i]) * def + pos;
+        vec3 p2 = (curPos - vec3(1, 1, 1) + comparisons[i + 1]) * def + pos;
 //        float d1 = sdVerticalCapsule(p1, 1, 0.5);
 //        float d2 = sdVerticalCapsule(p2, 1, 0.5);
-        vec3 pa = gl_LocalInvocationID + comparisons[i];
-        vec3 pb = gl_LocalInvocationID + comparisons[i + 1];
+        vec3 pa = curIndex + comparisons[i] - vec3(1, 1, 1);
+        vec3 pb = curIndex + comparisons[i + 1] - vec3(1, 1, 1);
+        //vec3 pa = curIndex + comparisons[i];
+        //vec3 pb = curIndex + comparisons[i + 1];
 
         float d1 = sdfValue[int(pa.x)][int(pa.y)][int(pa.z)];
         float d2 = sdfValue[int(pb.x)][int(pb.y)][int(pb.z)];
@@ -158,17 +160,17 @@ void main() {
         uint outIndexCurr = atomicCounterIncrement(outIndex);
         outData[outIndexCurr] = avgPoint;
 
-        uint t = atomicCounterAdd(outIndex, uint(1));
-        outDataOld[t] = avgPoint;
+        //uint t = atomicCounterAdd(outIndex, uint(1));
+        //outDataOld[t] = avgPoint;
 
         //outIndicies[outIndexCurr] = avgPoint;
 
-        indicies[gl_LocalInvocationID.x][gl_LocalInvocationID.y][gl_LocalInvocationID.z] = int(outIndexCurr);
+        indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z) - 1] = int(outIndexCurr);
     } else {
         //uint outIndexCurr = atomicCounterIncrement(outIndex);
         //uint outIndexCurr = outIndex++;
         //outData[outIndexCurr] = vec3(0.0, 0.0, 0.0);
-        indicies[gl_LocalInvocationID.x][gl_LocalInvocationID.y][gl_LocalInvocationID.z] = -1;
+        indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z) - 1] = -1;
     }
 
     //outData[outIndexCurr] = vec3(outIndexCurr, 0.0, 0.0);
@@ -184,20 +186,25 @@ void main() {
 //    outIndicies[ta] = vec3(0, 1, 0);
     //outIndicies[ta] = vec3(indicies[gl_LocalInvocationID.x][gl_LocalInvocationID.y][gl_LocalInvocationID.z], 1, 0);
 
+    // Getting rid of the threads at the boundaries, they won't have all of the points they need anyways
+    if (gl_LocalInvocationID.x == 9 || gl_LocalInvocationID.y == 9 || gl_LocalInvocationID.z == 9) {
+        return;
+    }
     vec3 axes[] = {
         {1.0, 0.0, 0.0},
         {0.0, 1.0, 0.0},
         {0.0, 0.0, 1.0},
     };
+    atomicCounterExchange(outIndex, uint(0));
 
-    if (indicies[gl_LocalInvocationID.x][gl_LocalInvocationID.y][gl_LocalInvocationID.z] != -1) {
+    if (indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)] != -1) {
         //vec3 p1 = gl_LocalInvocationID * def + pos;
         //float d1 = sdVerticalCapsule(p1, 1, 0.4);
-        float d1 = sdfValue[gl_LocalInvocationID.x][gl_LocalInvocationID.y][gl_LocalInvocationID.z];
+        float d1 = sdfValue[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
 
         for (int i = 0; i < 3; i++) {
             //vec3 p2 = (gl_LocalInvocationID + axes[i]) * def + pos;
-            vec3 axisA = gl_LocalInvocationID + axes[i];
+            vec3 axisA = curIndex + axes[i];
             float d2 = sdfValue[int(axisA.x)][int(axisA.y)][int(axisA.z)];
 
             //float d2 = sdVerticalCapsule(p2, 1, 0.4);
@@ -215,10 +222,10 @@ void main() {
                 uint t;
 
                 if (int(axes[i].x) == 1) {
-                    int i1 = indicies[gl_LocalInvocationID.x][gl_LocalInvocationID.y][gl_LocalInvocationID.z];
-                    int i2 = indicies[gl_LocalInvocationID.x][gl_LocalInvocationID.y - 1][gl_LocalInvocationID.z];
-                    int i3 = indicies[gl_LocalInvocationID.x][gl_LocalInvocationID.y][gl_LocalInvocationID.z - 1];
-                    int i4 = indicies[gl_LocalInvocationID.x][gl_LocalInvocationID.y - 1][gl_LocalInvocationID.z - 1];
+                    int i1 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
+                    int i2 = indicies[int(curIndex.x)][int(curIndex.y) - 1][int(curIndex.z)];
+                    int i3 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z) - 1];
+                    int i4 = indicies[int(curIndex.x)][int(curIndex.y) - 1][int(curIndex.z) - 1];
                     if (i2 == -1 || i3 == -1 || i4 == -1) {
                         //t = atomicCounterAdd(outIndex, uint(6));
                         //outIndicies[t] = gl_LocalInvocationID * def + pos;
@@ -242,10 +249,10 @@ void main() {
                     outIndicies[t+5] = outData[i4];
 
                 } else if (int(axes[i].y) == 1) {
-                    int i1 = indicies[gl_LocalInvocationID.x][gl_LocalInvocationID.y][gl_LocalInvocationID.z];
-                    int i2 = indicies[gl_LocalInvocationID.x][gl_LocalInvocationID.y][gl_LocalInvocationID.z - 1];
-                    int i3 = indicies[gl_LocalInvocationID.x - 1][gl_LocalInvocationID.y][gl_LocalInvocationID.z];
-                    int i4 = indicies[gl_LocalInvocationID.x - 1][gl_LocalInvocationID.y][gl_LocalInvocationID.z - 1];
+                    int i1 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
+                    int i2 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z) - 1];
+                    int i3 = indicies[int(curIndex.x) - 1][int(curIndex.y)][int(curIndex.z)];
+                    int i4 = indicies[int(curIndex.x) - 1][int(curIndex.y)][int(curIndex.z) - 1];
                     if (i2 == -1 || i3 == -1 || i4 == -1) {
                         continue;
                     }
@@ -268,10 +275,10 @@ void main() {
                     //outIndicies[t+4] = (gl_LocalInvocationID - vec3(1, 0, 0)) * def + pos;
                     //outIndicies[t+5] = (gl_LocalInvocationID - vec3(1, 1, 0)) * def + pos;
 
-                    int i1 = indicies[gl_LocalInvocationID.x][gl_LocalInvocationID.y][gl_LocalInvocationID.z];
-                    int i2 = indicies[gl_LocalInvocationID.x][gl_LocalInvocationID.y - 1][gl_LocalInvocationID.z];
-                    int i3 = indicies[gl_LocalInvocationID.x - 1][gl_LocalInvocationID.y][gl_LocalInvocationID.z];
-                    int i4 = indicies[gl_LocalInvocationID.x - 1][gl_LocalInvocationID.y - 1][gl_LocalInvocationID.z];
+                    int i1 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
+                    int i2 = indicies[int(curIndex.x)][int(curIndex.y) - 1][int(curIndex.z)];
+                    int i3 = indicies[int(curIndex.x) - 1][int(curIndex.y)][int(curIndex.z)];
+                    int i4 = indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z)];
                     if (i2 == -1 || i3 == -1 || i4 == -1) {
                         continue;
                     }

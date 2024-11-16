@@ -172,7 +172,7 @@ int main() {
     glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 2, ssboOutData);
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 
-    glDispatchCompute(1, 1, 1);
+    glDispatchCompute(1, 2, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     glUseProgram(testRenderProgram->program);
