@@ -19,6 +19,7 @@ struct TreeDetails {
 //};
 layout(location = 3) uniform uint numBranches;
 layout(location = 4) uniform vec3 branches[30];
+layout(binding = 5) uniform atomic_uint outIndex;
 layout(std430, binding = 1) buffer outputIndiciesBuff {
     writeonly restrict vec3 outIndicies[];
 };
@@ -27,7 +28,6 @@ layout(std430, binding = 1) buffer outputIndiciesBuff {
 shared vec3 outData[2000];
 shared int indicies[11][11][11];
 
-shared uint outIndex;
 shared uint currIndex;
 
 // SDF from https://iquilezles.org/articles/distfunctions/
@@ -62,13 +62,13 @@ float calcSdf(vec3 p) {
 shared float sdfValue[11][11][11];
 void main() {
     if (gl_LocalInvocationID == vec3(0, 0, 0)) {
-        outIndex = 0;
+        //outIndex = 0;
         currIndex = 0;
     }
     vec3 curIndex = gl_LocalInvocationID + vec3(1, 1, 1);
     vec3 curPos = gl_GlobalInvocationID - vec3(0, gl_WorkGroupID.y, 0);
 
-    float def = 0.1;
+    float def = 0.2;
     vec3 pos = {-0.5, 0, -0.5};
     //vec3 pos = {0.0, 0.0, 0.0};
 
@@ -232,7 +232,7 @@ void main() {
                         continue;
                     }
 
-                    t = atomicAdd(outIndex, uint(12));
+                    t = atomicCounterAdd(outIndex, uint(12));
                     outIndicies[t] = outData[i1];
                     outIndicies[t+1] = outData[i1+1];
                     outIndicies[t+2] = outData[i2];
@@ -256,7 +256,7 @@ void main() {
                         continue;
                     }
 
-                    t = atomicAdd(outIndex, uint(12));
+                    t = atomicCounterAdd(outIndex, uint(12));
                     outIndicies[t] = outData[i1];
                     outIndicies[t+1] = outData[i1+1];
                     outIndicies[t+2] = outData[i2];
@@ -279,7 +279,7 @@ void main() {
                         continue;
                     }
 
-                    t = atomicAdd(outIndex, uint(12));
+                    t = atomicCounterAdd(outIndex, uint(12));
                     outIndicies[t] = outData[i1];
                     outIndicies[t+1] = outData[i1+1];
                     outIndicies[t+2] = outData[i2];

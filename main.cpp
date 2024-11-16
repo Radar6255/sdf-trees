@@ -159,9 +159,9 @@ int main() {
     branches[0] = {0, 0, 0};
     branches[1] = {0, 0.4, 0};
     branches[2] = {0, 0.4, 0};
-    branches[3] = {0.2, 0.6, 0};
+    branches[3] = {0.2, 2, 0.1};
     branches[4] = {0, 0.4, 0};
-    branches[5] = {-0.1, 0.7, 0.3};
+    branches[5] = {-0.5, 0.7, 0.8};
 
     td.numBranches = 3;
 
@@ -183,7 +183,15 @@ int main() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboOutIndicies);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    glDispatchCompute(1, 3, 1);
+    GLuint atomicCounter;
+    GLuint inCounter = 0;
+    glGenBuffers(1, &atomicCounter);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomicCounter);
+    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &inCounter, GL_STATIC_DRAW);
+    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 5, atomicCounter);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
+
+    glDispatchCompute(1, 4, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     glUseProgram(testRenderProgram->program);
