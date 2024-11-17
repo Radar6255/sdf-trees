@@ -1,4 +1,5 @@
 #include "World/CustomModel.h"
+#include "World/Tree.h"
 #include "glad/glad.h"
 #include "UseImGui.h"
 #include "GLFW/glfw3.h"
@@ -142,37 +143,31 @@ int main() {
     /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);*/
     /*glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);*/
 
+    /*glm::vec3 branches[30];*/
+    /*branches[0] = {0, 0, 0};*/
+    /*branches[1] = {0, 1.2, 0};*/
+    /*branches[2] = {0, 1.2, 0};*/
+    /*branches[3] = {0.2, 2, 0.1};*/
+    /*branches[4] = {0, 1.2, 0};*/
+    /*branches[5] = {-0.5, 1.5, 0.8};*/
+
+    Tree t(50);
+
+    glm::vec3* branches = t.GetBranches();
+
     GLuint vao;
     glGenVertexArrays(1, &vao);
 
-    /*layout(std430, binding = 0) buffer treeDetails {*/
-    /*    readonly restrict vec3 branches[30];*/
-    /*    readonly restrict uint numBranches;*/
-    /*};*/
 
-    struct TreeDetails {
-        glm::vec3 branches[30];
-        GLuint numBranches;
-    } td;
 
-    glm::vec3 branches[30];
-    branches[0] = {0, 0, 0};
-    branches[1] = {0, 0.4, 0};
-    branches[2] = {0, 0.4, 0};
-    branches[3] = {0.2, 2, 0.1};
-    branches[4] = {0, 0.4, 0};
-    branches[5] = {-0.5, 0.7, 0.8};
+    /*GLuint treeBufferObject;*/
+    /*glGenBuffers(1, &treeBufferObject);*/
+    /*glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeBufferObject);*/
+    /*glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(struct TreeDetails), &td, GL_DYNAMIC_DRAW);*/
+    /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, treeBufferObject);*/
+    /*glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);*/
 
-    td.numBranches = 3;
-
-    GLuint treeBufferObject;
-    glGenBuffers(1, &treeBufferObject);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeBufferObject);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(struct TreeDetails), &td, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, treeBufferObject);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-    glUniform1ui(3, 3);
+    glUniform1ui(3, 15);
     glUniform3fv(4, 30, (const GLfloat*)branches);
 
     glm::vec3 outIndicies[20000];
@@ -191,7 +186,7 @@ int main() {
     glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 5, atomicCounter);
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 
-    glDispatchCompute(1, 4, 1);
+    glDispatchCompute(10, 40, 10);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     glUseProgram(testRenderProgram->program);
@@ -228,7 +223,7 @@ int main() {
     int width = 100;
     int length = 100;
 
-    int size = 1;
+    int size = 2;
     int chunkSize = 100;
     int numTerrains = size * size;
 
@@ -334,7 +329,7 @@ int main() {
         glBindVertexArray(vao);
         glPointSize(3);
         /*glDrawArrays(GL_POINTS, 0, 4000);*/
-        glDrawArrays(GL_TRIANGLES, 0, 4000);
+        glDrawArrays(GL_TRIANGLES, 0, 6000);
 
         /*cm->Render();*/
 

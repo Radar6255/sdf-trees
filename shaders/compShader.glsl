@@ -66,7 +66,7 @@ void main() {
         currIndex = 0;
     }
     vec3 curIndex = gl_LocalInvocationID + vec3(1, 1, 1);
-    vec3 curPos = gl_GlobalInvocationID - vec3(0, gl_WorkGroupID.y, 0);
+    vec3 curPos = gl_GlobalInvocationID - vec3(gl_WorkGroupID.x, gl_WorkGroupID.y, gl_WorkGroupID.z);
 
     float def = 0.2;
     vec3 pos = {-0.5, 0, -0.5};
