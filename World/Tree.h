@@ -26,7 +26,7 @@ class Tree {
 public:
     Tree(int numPoints);
     void Render(Shaders* shaders);
-    glm::vec3* GetBranches();
+    std::vector<glm::vec3>* GetBranches();
 private:
     std::vector<Branch*> branches;
     std::vector<Leaf> leaves;

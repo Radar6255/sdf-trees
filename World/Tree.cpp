@@ -68,15 +68,16 @@ Tree::Tree(int numPoints) {
     }
 }
 
-glm::vec3* Tree::GetBranches(){
-    glm::vec3* out = new glm::vec3[this->branches.size() * 2];
+std::vector<glm::vec3>* Tree::GetBranches(){
+    /*std::vector<glm::vec3> out = new glm::vec3[this->branches.size() * 2];*/
+    std::vector<glm::vec3>* out = new std::vector<glm::vec3>(this->branches.size() * 2);
 
     glm::vec3 offset = {5, 2, 5};
 
     int i = 0;
     for (Branch* b: this->branches) {
-        out[i] = b->root + offset;
-        out[i + 1] = b->root + b->dir + offset;
+        out->push_back(b->root + offset);
+        out->push_back(b->root + b->dir + offset);
         i += 2;
         /*std::cout << "Branch start: (" << b->root.x << ", " << b->root.y << ", " << b->root.z << ")" << std::endl;*/
         /*std::cout << "Branch end: (" << b->root.x - b->dir.x << ", " << b->root.y - b->dir.y << ", " << b->root.z - b->dir.z << ")" << std::endl;*/
