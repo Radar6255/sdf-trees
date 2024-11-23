@@ -3,29 +3,22 @@
 
 layout(local_size_x = 10, local_size_y = 10, local_size_z = 10) in;
 
-// TODO Here I need to get any buffers that I want to read/write to
+// Here I need to get any buffers that I want to read/write to
 // Below should be the input for the trees
 // Not sure how big to make this...
-//layout(std430, binding = 0) buffer layoutName {
-//    readonly vec3 data[2];
-//};
-struct TreeDetails {
-    vec3 branches[30];
-    uint numBranches;
-};
-//layout(std430, binding = 0) buffer treeDetails {
-//    readonly restrict vec3 branches[30];
-//    readonly restrict uint numBranches;
-//};
+
 layout(location = 3) uniform uint numBranches;
 layout(location = 4) uniform vec3 branches[30];
 layout(binding = 5) uniform atomic_uint outIndex;
+//layout(std430, binding = 3) buffer outMeta {
+//    writeonly restrict uint numVerticiesOut[];
+//};
 layout(std430, binding = 1) buffer outputIndiciesBuff {
     writeonly restrict vec3 outIndicies[];
 };
 
 //shared uint outIndex;
-shared vec3 outData[2000];
+shared vec3 outData[3000];
 shared int indicies[11][11][11];
 
 shared uint currIndex;
@@ -54,8 +47,6 @@ float calcSdf(vec3 p) {
         }
     }
 
-    //return sdVerticalCapsule(p, 0.5, r);
-    //return sdCapsule(p, vec3(0, 0, 0), vec3(0, 0.5, 0), r);
     return min;
 }
 
@@ -86,10 +77,26 @@ void main() {
     if (gl_LocalInvocationID.y == 0) {
         vec3 p1 = (curPos - vec3(0, 1, 0)) * def + pos;
         sdfValue[int(curIndex.x)][0][int(curIndex.z)] = calcSdf(p1);
+        if (gl_LocalInvocationID.x == 0) {
+            vec3 p1 = (curPos - vec3(1, 1, 0)) * def + pos;
+            sdfValue[0][0][int(curIndex.z)] = calcSdf(p1);
+        }
     }
     if (gl_LocalInvocationID.z == 0) {
         vec3 p1 = (curPos - vec3(0, 0, 1)) * def + pos;
         sdfValue[int(curIndex.x)][int(curIndex.y)][0] = calcSdf(p1);
+        if (gl_LocalInvocationID.x == 0) {
+            vec3 p1 = (curPos - vec3(1, 0, 1)) * def + pos;
+            sdfValue[0][int(curIndex.y)][0] = calcSdf(p1);
+        }
+        if (gl_LocalInvocationID.y == 0) {
+            vec3 p1 = (curPos - vec3(0, 1, 1)) * def + pos;
+            sdfValue[int(curIndex.x)][0][0] = calcSdf(p1);
+        }
+        if (gl_LocalInvocationID.x == 0 && gl_LocalInvocationID.y == 0) {
+            vec3 p1 = (curPos - vec3(1, 1, 1)) * def + pos;
+            sdfValue[0][0][0] = calcSdf(p1);
+        }
     }
 
     // Making sure that all of the SDF values have been calculated first
@@ -102,18 +109,6 @@ void main() {
     };
 
     vec3 comparisons[] = {
-//        {0.0, 0.0, 0.0},
-//        {0.0, 0.0, 1.0},
-//        {0.0, 0.0, 0.0},
-//        {0.0, 1.0, 0.0},
-//        {0.0, 0.0, 0.0},
-//        {1.0, 0.0, 0.0},
-//        {1.0, 1.0, 1.0},
-//        {1.0, 1.0, 0.0},
-//        {1.0, 1.0, 1.0},
-//        {1.0, 0.0, 1.0},
-//        {1.0, 1.0, 1.0},
-//        {0.0, 1.0, 1.0},
         {0.0, 0.0, 0.0},
         {0.0, 0.0, 1.0},
         {0.0, 1.0, 0.0},
@@ -155,12 +150,9 @@ void main() {
         // The faces connect into the negative direction
         vec3 p1 = (curPos - vec3(1, 1, 1) + comparisons[i]) * def + pos;
         vec3 p2 = (curPos - vec3(1, 1, 1) + comparisons[i + 1]) * def + pos;
-//        float d1 = sdVerticalCapsule(p1, 1, 0.5);
-//        float d2 = sdVerticalCapsule(p2, 1, 0.5);
+
         vec3 pa = curIndex + comparisons[i] - vec3(1, 1, 1);
         vec3 pb = curIndex + comparisons[i + 1] - vec3(1, 1, 1);
-        //vec3 pa = curIndex + comparisons[i];
-        //vec3 pb = curIndex + comparisons[i + 1];
 
         float d1 = sdfValue[int(pa.x)][int(pa.y)][int(pa.z)];
         float d2 = sdfValue[int(pb.x)][int(pb.y)][int(pb.z)];
@@ -177,15 +169,9 @@ void main() {
     }
 
     if (numIntersections != 0) {
-        //vec3 avgPoint = intersectionsSum / (1.0f * numIntersections);
         vec3 avgPoint = intersectionsSum * (1.0f / numIntersections);
 
-        //ta = outIndexIndex++;
-        //outIndicies[ta] = avgPoint;
-        //uint ta = outIndexIndex++;
-
         // TODO Need to add this to the output somewhere
-        //uint outIndexCurr = atomicCounterIncrement(outIndex);
         uint outIndexCurr = atomicAdd(currIndex, 2);
         outData[outIndexCurr] = avgPoint;
         outData[outIndexCurr+1] = normal;
@@ -247,6 +233,12 @@ void main() {
                     outIndicies[t+10] = outData[i4];
                     outIndicies[t+11] = outData[i4+1];
 
+                    if (int(curIndex.x) < 2 || int(curIndex.y) < 2 || int(curIndex.z) < 2) {
+                        //outIndicies[t+7] = vec3( 1, 1, 1 );
+                        //outIndicies[t+9] = vec3( 1, 1, 1 );
+                        //outIndicies[t+11] = vec3( 1, 1, 1 );
+                    }
+
                 } else if (int(axes[i].y) == 1) {
                     int i1 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
                     int i2 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z) - 1];
@@ -270,6 +262,12 @@ void main() {
                     outIndicies[t+9] = outData[i3+1];
                     outIndicies[t+10] = outData[i4];
                     outIndicies[t+11] = outData[i4+1];
+
+                    if (int(curIndex.x) < 2 || int(curIndex.y) < 2 || int(curIndex.z) < 2) {
+                        //outIndicies[t+7] = vec3( 1, 1, 1 );
+                        //outIndicies[t+9] = vec3( 1, 1, 1 );
+                        //outIndicies[t+11] = vec3( 1, 1, 1 );
+                    }
                 } else if (int(axes[i].z) == 1) {
                     int i1 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
                     int i2 = indicies[int(curIndex.x)][int(curIndex.y) - 1][int(curIndex.z)];
@@ -293,6 +291,11 @@ void main() {
                     outIndicies[t+9] = outData[i3+1];
                     outIndicies[t+10] = outData[i4];
                     outIndicies[t+11] = outData[i4+1];
+                    if (int(curIndex.x) < 2 || int(curIndex.y) < 2 || int(curIndex.z) < 2) {
+                        //outIndicies[t+7] = vec3( 1, 1, 1 );
+                        //outIndicies[t+9] = vec3( 1, 1, 1 );
+                        //outIndicies[t+11] = vec3( 1, 1, 1 );
+                    }
                 }
             }
         }

@@ -30,6 +30,7 @@ void UseImGui::Update(GuiData* gd) {
 
     ImGui::Text("Recent render time: %.1f", gd->recentRenderTime);
     ImGui::Text("Avg render time: %.1f", gd->avgRenderTime);
+    ImGui::Text("FPS: %.1f", 1000 / gd->avgRenderTime);
     ImGui::Text("Recent update Rate: %.1f", gd->recentUpdateRate);
     ImGui::Text("Avg update Rate: %.1f", gd->updateRate);
 

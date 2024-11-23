@@ -11,6 +11,7 @@
 #include "GameState.h"
 
 #include <GL/gl.h>
+#include <GL/glext.h>
 #include <atomic>
 #include <chrono>
 #include <glm/ext/vector_float3.hpp>
@@ -133,23 +134,6 @@ int main() {
     glm::vec3 out[1000];
 
     glUseProgram(testProgram->program);
-    GLuint outIndex = glGetUniformLocation(testProgram->program, "outIndex");
-    glUniform1ui(outIndex, 0);
-
-    /*GLuint ssbo;*/
-    /*glGenBuffers(1, &ssbo);*/
-    /*glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);*/
-    /*glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(data), data, GL_DYNAMIC_COPY);*/
-    /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);*/
-    /*glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);*/
-
-    /*glm::vec3 branches[30];*/
-    /*branches[0] = {0, 0, 0};*/
-    /*branches[1] = {0, 1.2, 0};*/
-    /*branches[2] = {0, 1.2, 0};*/
-    /*branches[3] = {0.2, 2, 0.1};*/
-    /*branches[4] = {0, 1.2, 0};*/
-    /*branches[5] = {-0.5, 1.5, 0.8};*/
 
     Tree t(50);
 
@@ -157,15 +141,6 @@ int main() {
 
     GLuint vao;
     glGenVertexArrays(1, &vao);
-
-
-
-    /*GLuint treeBufferObject;*/
-    /*glGenBuffers(1, &treeBufferObject);*/
-    /*glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeBufferObject);*/
-    /*glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(struct TreeDetails), &td, GL_DYNAMIC_DRAW);*/
-    /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, treeBufferObject);*/
-    /*glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);*/
 
     glUniform1ui(3, 15);
     glUniform3fv(4, 30, (const GLfloat*)branches);
@@ -178,11 +153,13 @@ int main() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboOutIndicies);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
+    GLuint numVerticies = 0;
+
     GLuint atomicCounter;
     GLuint inCounter = 0;
     glGenBuffers(1, &atomicCounter);
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomicCounter);
-    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &inCounter, GL_STATIC_DRAW);
+    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &inCounter, GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 5, atomicCounter);
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 
@@ -268,6 +245,25 @@ int main() {
 
     while (!glfwWindowShouldClose(window)) {
         std::chrono::time_point<std::chrono::high_resolution_clock> startFrame = std::chrono::high_resolution_clock::now();
+        Tree* tree = new Tree(50);
+
+        glm::vec3* branches = tree->GetBranches();
+
+
+        if (gd.updateTerrain) {
+            glUseProgram(testProgram->program);
+
+            glUniform1ui(3, 15);
+            glUniform3fv(4, 30, (const GLfloat*)branches);
+
+            glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOutIndicies);
+            glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomicCounter);
+            GLuint vertNum = 0;
+            glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &vertNum);
+
+            // Actually dispatching the compute shader
+            glDispatchCompute(10, 40, 10);
+        }
         if (shortFrameCount == 600) {
             std::cout << "Recent average frame time: " << shortFrameTime / 600 << std::endl;
             shortFrameTime = 0;
@@ -324,12 +320,22 @@ int main() {
         for (int ti = 0; ti < size * size; ti++) {
             /*world[ti]->Render(&shaders);*/
         }
+        // Waiting for compute shader to complete
+        glUseProgram(testProgram->program);
+        /*glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);*/
+        glMemoryBarrier(GL_ALL_BARRIER_BITS);
+        // Getting the number of triangles to render from the atomic counter
+        glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomicCounter);
+        glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &numVerticies);
 
         glUseProgram(testRenderProgram->program);
         glBindVertexArray(vao);
         glPointSize(3);
         /*glDrawArrays(GL_POINTS, 0, 4000);*/
-        glDrawArrays(GL_TRIANGLES, 0, 6000);
+
+        /*std::cout << "Num verticies: " << numVerticies << std::endl;*/
+
+        glDrawArrays(GL_TRIANGLES, 0, numVerticies / 2);
 
         /*cm->Render();*/
 

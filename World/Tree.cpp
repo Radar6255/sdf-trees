@@ -25,7 +25,7 @@ void Branch::reset() {
     this->forceDirection = this->dir;
 }
 
-float minDist = 2;
+float minDist = 3;
 float maxDist = 10;
 
 Tree::Tree(int numPoints) {
@@ -61,8 +61,11 @@ Tree::Tree(int numPoints) {
         this->leaves.push_back(t);
     }
 
+    int i = 0;
     // Growing the whole tree out
-    while(this->Grow());
+    while(this->Grow() && i < 20) {
+        i++;
+    }
 }
 
 glm::vec3* Tree::GetBranches(){
@@ -75,8 +78,8 @@ glm::vec3* Tree::GetBranches(){
         out[i] = b->root + offset;
         out[i + 1] = b->root + b->dir + offset;
         i += 2;
-        std::cout << "Branch start: (" << b->root.x << ", " << b->root.y << ", " << b->root.z << ")" << std::endl;
-        std::cout << "Branch end: (" << b->root.x - b->dir.x << ", " << b->root.y - b->dir.y << ", " << b->root.z - b->dir.z << ")" << std::endl;
+        /*std::cout << "Branch start: (" << b->root.x << ", " << b->root.y << ", " << b->root.z << ")" << std::endl;*/
+        /*std::cout << "Branch end: (" << b->root.x - b->dir.x << ", " << b->root.y - b->dir.y << ", " << b->root.z - b->dir.z << ")" << std::endl;*/
     }
 
     return out;
@@ -145,11 +148,11 @@ bool Tree::Grow() {
 
         // This creates the new child and resets this branch
         this->branches.push_back(child);
-        std::cout << "Branches size: " << this->branches.size() << std::endl;
+        /*std::cout << "Branches size: " << this->branches.size() << std::endl;*/
     }
 
     for (int l = 0; l < this->leaves.size(); l++) {
-        std::cout << "Leaf pos: " << this->leaves[l].pos.x << ", " << this->leaves[l].pos.y << ", " << this->leaves[l].pos.z << ")" << std::endl;
+        /*std::cout << "Leaf pos: " << this->leaves[l].pos.x << ", " << this->leaves[l].pos.y << ", " << this->leaves[l].pos.z << ")" << std::endl;*/
     }
     return out;
 }
