@@ -19,6 +19,7 @@
 #include <iostream>
 #include <ostream>
 #include <thread>
+#include <vector>
 
 #define RENDER_DATA_BUFFERS 1
 
@@ -124,53 +125,31 @@ int main() {
     Program *testProgram = new Program("./shaders/compShader.glsl");
     Program *testRenderProgram = new Program("./shaders/testFragShader.glsl", "./shaders/testVertShader.glsl");
 
-    // TODO Here generate a buffer for testing...
-    glm::vec3 data[2];
-
-    int in = 0;
-    data[0] = {0, 0, 0};
-    data[1] = {0, 1, 0};
-
     glUseProgram(testProgram->program);
 
-    Tree t(50);
-    Tree t2(50);
-    std::vector<glm::vec3>* branches = t.GetBranches();
-    std::vector<glm::vec3>* branches2 = t2.GetBranches();
+    GLint max;
+    glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &max);
+    std::cout << "Max invocations: " << max << std::endl;
 
-    uint inDataSize = 3 * branches->size() + 3 * branches2->size() + 4 * 2;
-    float inData[inDataSize];
+    int numTrees = 100;
+    Tree* trees[numTrees];
 
+    std::vector<float> inDataVec;
+    for (int i = 0; i < numTrees; i++) {
+        trees[i] = new Tree(50);
 
-    // Size
-    inData[0] = branches->size() * 3 + 4;
-    std::cout << "Size: " << inData[0] << std::endl;
-    // Position
-    inData[1] = 0;
-    inData[2] = 0;
-    inData[3] = 0;
-    // Branches
-    int i = 4;
-    for (glm::vec3 bPos : *branches) {
-        inData[i] = bPos.x;
-        inData[i+1] = bPos.y;
-        inData[i+2] = bPos.z;
-        i+=3;
-    }
-    std::cout << "Start: " << i << std::endl;
-    // Size
-    inData[i] = branches2->size() * 3 + 4;
-    // Position
-    inData[i+1] = 5;
-    inData[i+2] = 5;
-    inData[i+3] = 5;
-    // Branches
-    i += 4;
-    for (glm::vec3 bPos : *branches2) {
-        inData[i] = bPos.x;
-        inData[i+1] = bPos.y;
-        inData[i+2] = bPos.z;
-        i+=3;
+        std::vector<glm::vec3>* branches = trees[i]->GetBranches();
+
+        inDataVec.push_back(branches->size() * 3 + 4);
+        inDataVec.push_back(10 * i);
+        inDataVec.push_back(0);
+        inDataVec.push_back(0);
+
+        for (glm::vec3 bPos : *branches) {
+            inDataVec.push_back(bPos.x);
+            inDataVec.push_back(bPos.y);
+            inDataVec.push_back(bPos.z);
+        }
     }
 
     GLuint vao;
@@ -179,15 +158,14 @@ int main() {
     GLuint ssboInData;
     glGenBuffers(1, &ssboInData);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboInData);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * inDataSize, inData, GL_DYNAMIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * inDataVec.size() * 2, inDataVec.data(), GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssboInData);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    glm::vec3 outIndicies[40000];
     GLuint ssboOutIndicies;
     glGenBuffers(1, &ssboOutIndicies);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOutIndicies);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(outIndicies), outIndicies, GL_DYNAMIC_COPY);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::vec3) * 4000000, NULL, GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboOutIndicies);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
@@ -201,8 +179,17 @@ int main() {
     glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 5, atomicCounter);
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 
-    glDispatchCompute(10, 40, 10);
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    GLuint finishedInvocationsCounter;
+    GLuint finishedInvocations = 0;
+    glGenBuffers(1, &finishedInvocationsCounter);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, finishedInvocationsCounter);
+    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &finishedInvocations, GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 6, finishedInvocationsCounter);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
+
+    std::cout << "Curr invocations: " << 5 * 10 * numTrees * 5 << std::endl;
+    glDispatchCompute(5, 10 * numTrees, 5);
+    /*glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);*/
 
     glUseProgram(testRenderProgram->program);
     glBindVertexArray(vao);
@@ -284,17 +271,30 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         std::chrono::time_point<std::chrono::high_resolution_clock> startFrame = std::chrono::high_resolution_clock::now();
 
-        if (gd.updateTerrain && 0) {
-            Tree* tree = new Tree(50);
-            std::vector<glm::vec3>* branchesT = tree->GetBranches();
-            std::cout << branchesT->size() << std::endl;
+        if (gd.updateTerrain && finishedInvocations == 0) {
+            std::vector<float> inDataVec;
+            for (int i = 0; i < numTrees; i++) {
+                trees[i] = new Tree(50);
 
-            /*glm::vec3* branches = tree->GetBranches()->data();*/
+                std::vector<glm::vec3>* branches = trees[i]->GetBranches();
+
+                inDataVec.push_back(branches->size() * 3 + 4);
+                inDataVec.push_back(10 * i);
+                inDataVec.push_back(0);
+                inDataVec.push_back(0);
+
+                for (glm::vec3 bPos : *branches) {
+                    inDataVec.push_back(bPos.x);
+                    inDataVec.push_back(bPos.y);
+                    inDataVec.push_back(bPos.z);
+                }
+            }
 
             glUseProgram(testProgram->program);
 
-            glUniform1ui(3, 15);
-            glUniform3fv(4, 30, (const GLfloat*)branchesT->data());
+            glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboInData);
+            /*glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * inDataVec.size() * 2, inDataVec.data(), GL_DYNAMIC_DRAW);*/
+            glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(float) * inDataVec.size(), inDataVec.data());
 
             glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOutIndicies);
             glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomicCounter);
@@ -302,7 +302,7 @@ int main() {
             glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &vertNum);
 
             // Actually dispatching the compute shader
-            glDispatchCompute(10, 20, 10);
+            glDispatchCompute(5, 10 * numTrees, 5);
         }
         if (shortFrameCount == 600) {
             std::cout << "Recent average frame time: " << shortFrameTime / 600 << std::endl;
@@ -363,17 +363,28 @@ int main() {
         // Waiting for compute shader to complete
         glUseProgram(testProgram->program);
         /*glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);*/
-        glMemoryBarrier(GL_ALL_BARRIER_BITS);
-        // Getting the number of triangles to render from the atomic counter
-        glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomicCounter);
-        glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &numVerticies);
+        glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, finishedInvocationsCounter);
+        glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &finishedInvocations);
+
+        if (finishedInvocations >= 5 * 5 * 10 * numTrees * 10 * 10 * 10) {
+            //glMemoryBarrier(GL_ALL_BARRIER_BITS);
+            // Getting the number of triangles to render from the atomic counter
+            glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomicCounter);
+            glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &numVerticies);
+
+            finishedInvocations = 0;
+            glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, finishedInvocationsCounter);
+            glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &finishedInvocations);
+        } else {
+            std::cout << "Finished invocations: " << finishedInvocations << "/" << 5 * 5 * 10 * numTrees * 10 * 10 * 10 << std::endl;
+        }
 
         glUseProgram(testRenderProgram->program);
         glBindVertexArray(vao);
         glPointSize(3);
         /*glDrawArrays(GL_POINTS, 0, 4000);*/
 
-        std::cout << "Num verticies: " << numVerticies << std::endl;
+        /*std::cout << "Num verticies: " << numVerticies << std::endl;*/
 
         glDrawArrays(GL_TRIANGLES, 0, numVerticies / 2);
 

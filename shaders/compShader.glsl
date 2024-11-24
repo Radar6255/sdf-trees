@@ -8,11 +8,12 @@ layout(local_size_x = 10, local_size_y = 10, local_size_z = 10) in;
 // Not sure how big to make this...
 
 layout(binding = 5) uniform atomic_uint outIndex;
+layout(binding = 6) uniform atomic_uint finishedInvocations;
 //layout(std430, binding = 3) buffer outMeta {
 //    writeonly restrict uint numVerticiesOut[];
 //};
 layout(std430, binding = 1) buffer outputIndiciesBuff {
-    writeonly restrict vec3 outIndicies[40000];
+    writeonly restrict vec3 outIndicies[4000000];
 };
 layout(std430, binding = 2) buffer inMeta {
     readonly restrict float inData[];
@@ -36,17 +37,21 @@ float sdCapsule( vec3 p, vec3 a, vec3 b, float r ) {
   return length( pa - ba*h ) - r;
 }
 
+//float def = 0.23;
+float def = 0.23;
 uint startPos = 0;
 uint treeSize;
+vec3 offset;
 
 float calcSdf(vec3 p) {
     float r = 0.23;
     //r = 0.1;
-    float min = 10000;
+    float min = 100000;
 
     for (uint i = startPos; i < treeSize + startPos; i += 6) {
         vec3 a = vec3(inData[i], inData[i + 1], inData[i + 2]);
         vec3 b = vec3(inData[i + 3], inData[i + 4], inData[i + 5]);
+
         float t = sdCapsule(p, a, b, r);
         if (t < min) {
             min = t;
@@ -56,42 +61,38 @@ float calcSdf(vec3 p) {
     return min;
 }
 
+int treeHeight = 10;
+
 shared float sdfValue[11][11][11];
 void main() {
     if (gl_LocalInvocationID == vec3(0, 0, 0)) {
         //outIndex = 0;
         currIndex = 0;
     }
-    vec3 curIndex = gl_LocalInvocationID + vec3(1, 1, 1);
-    vec3 curPos = gl_GlobalInvocationID - vec3(gl_WorkGroupID.x, gl_WorkGroupID.y, gl_WorkGroupID.z);
+    // Here we are finding the details about the tree that I am rendering
+    int treeNum = int(floor(gl_WorkGroupID.y / treeHeight));
 
-    float def = 0.23;
+    vec3 curIndex = gl_LocalInvocationID + vec3(1, 1, 1);
+    vec3 curPos = gl_GlobalInvocationID;
+    //vec3 curPos = gl_GlobalInvocationID - vec3(gl_WorkGroupID.x, gl_WorkGroupID.y, gl_WorkGroupID.z);
+
+    curPos.y = mod(curPos.y, treeHeight * 10);
+    curPos -= vec3(gl_WorkGroupID.x, mod(gl_WorkGroupID.y, treeHeight), gl_WorkGroupID.z);
+
     vec3 pos = {-0.5, 0, -0.5};
     //vec3 pos = {0.0, 0.0, 0.0};
 
     float r = 0.23;
-
-    // TODO Here we are finding the details about the tree that I am rendering
-    int treeNum = int(floor(gl_WorkGroupID.y / 20.0));
 
     uint ti = 0;
     while(ti < treeNum) {
         startPos += uint(inData[startPos]);
         ti++;
     }
-    curPos -= vec3(0, treeNum * 20 * 10, 0);
-    //if (startPos > 1) {
-    //    uint t = atomicCounterAdd(outIndex, uint(6));
-    //    outIndicies[t] = vec3( 4, 0, 0 );
-    //    outIndicies[t+1] = vec3( 1, 1, 1 );
-    //    outIndicies[t+2] = vec3( 4, 1, 0 );
-    //    outIndicies[t+3] = vec3( 1, 1, 1 );
-    //    outIndicies[t+4] = vec3( 4, 1, 1 );
-    //    outIndicies[t+5] = vec3( 1, 1, 1 );
-    //}
 
     // Skipping the header
     treeSize = uint(inData[startPos]) - 4;
+    offset = vec3(inData[startPos + 1], inData[startPos + 2], inData[startPos + 3]);
     startPos += 4;
 
     // Start by calculating all of the sdf values
@@ -201,7 +202,7 @@ void main() {
 
         // TODO Need to add this to the output somewhere
         uint outIndexCurr = atomicAdd(currIndex, 2);
-        outData[outIndexCurr] = avgPoint;
+        outData[outIndexCurr] = avgPoint + offset;
         outData[outIndexCurr+1] = normal;
 
         indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z) - 1] = int(outIndexCurr);
@@ -217,6 +218,7 @@ void main() {
 
     // Getting rid of the threads at the boundaries, they won't have all of the points they need anyways
     if (gl_LocalInvocationID.x == 9 || gl_LocalInvocationID.y == 9 || gl_LocalInvocationID.z == 9) {
+        atomicCounterAdd(finishedInvocations, 1);
         return;
     }
 
@@ -329,4 +331,6 @@ void main() {
             }
         }
     }
+
+    atomicCounterAdd(finishedInvocations, 1);
 }
