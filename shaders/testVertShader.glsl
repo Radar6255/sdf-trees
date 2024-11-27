@@ -1,7 +1,10 @@
 #version 430
 
 layout (std430, binding = 0) buffer vertData {
-    vec3 vertexPosition[];
+    vec3 vertexPosition[1000000];
+};
+layout (std430, binding = 1) buffer indiciesData {
+    uint indicies[4000000];
 };
 //layout (location = 0) in vec3 vertexPosition;
 //layout (location = 1) in vec3 vertexNormal;
@@ -19,19 +22,19 @@ out vec3 color;
 
 void main() {
     //gl_Position = vec4(vertexPosition, 1.0);
-    gl_Position = projection * view * model * vec4(vertexPosition[2 * gl_VertexID], 1.0);
+    gl_Position = projection * view * model * vec4(vertexPosition[indicies[gl_VertexID]], 1.0);
 
     //color = vec3(0.2, 0.2, 0.2 + gl_Position.x);
 
-    if (gl_VertexID % 3 == 0) {
-        color = vec3(1, 0, 0);
-    } else if (gl_VertexID % 3 == 1) {
-        color = vec3(0, 1, 0);
-    } else {
-        color = vec3(0, 0, 1);
-    }
+    //if (gl_VertexID % 3 == 0) {
+    //    color = vec3(1, 0, 0);
+    //} else if (gl_VertexID % 3 == 1) {
+    //    color = vec3(0, 1, 0);
+    //} else {
+    //    color = vec3(0, 0, 1);
+    //}
 
-    color = vertexPosition[2 * gl_VertexID + 1];
+    color = vertexPosition[indicies[gl_VertexID] + 1];
 
     //gl_Position = projection * view * model * vec4(vertexPosition, 1.0);
     //norm = (vec4(vertexNormal, 1.0)).xyz;

@@ -162,21 +162,38 @@ int main() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssboInData);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
+    uint maxIndicies = 4000000;
+    uint maxVerticies = 1000000;
+
     GLuint ssboOutIndicies;
     glGenBuffers(1, &ssboOutIndicies);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOutIndicies);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::vec3) * 4000000, NULL, GL_DYNAMIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GLuint) * maxIndicies, NULL, GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboOutIndicies);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    GLuint numVerticies = 0;
+    GLuint ssboOutVerticies;
+    glGenBuffers(1, &ssboOutVerticies);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOutVerticies);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::vec3) * maxVerticies, NULL, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssboOutVerticies);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    GLuint atomicCounter;
+    GLuint numIndicies = 0;
+
+    GLuint indiciesCounterBuff;
     GLuint inCounter = 0;
-    glGenBuffers(1, &atomicCounter);
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomicCounter);
+    glGenBuffers(1, &indiciesCounterBuff);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, indiciesCounterBuff);
     glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &inCounter, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 5, atomicCounter);
+    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 5, indiciesCounterBuff);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
+
+    GLuint vertCounterBuff;
+    glGenBuffers(1, &vertCounterBuff);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, vertCounterBuff);
+    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &inCounter, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 4, vertCounterBuff);
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 
     GLuint finishedInvocationsCounter;
@@ -197,8 +214,11 @@ int main() {
     /*glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOut);*/
     /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboOut);*/
 
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOutVerticies);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboOutVerticies);
+
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOutIndicies);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboOutIndicies);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboOutIndicies);
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
@@ -297,8 +317,11 @@ int main() {
             glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(float) * inDataVec.size(), inDataVec.data());
 
             glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOutIndicies);
-            glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomicCounter);
+            glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, indiciesCounterBuff);
             GLuint vertNum = 0;
+            glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &vertNum);
+
+            glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, vertCounterBuff);
             glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &vertNum);
 
             // Actually dispatching the compute shader
@@ -367,10 +390,16 @@ int main() {
         glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &finishedInvocations);
 
         if (finishedInvocations >= 5 * 5 * 10 * numTrees * 10 * 10 * 10) {
-            //glMemoryBarrier(GL_ALL_BARRIER_BITS);
+            glMemoryBarrier(GL_ALL_BARRIER_BITS);
             // Getting the number of triangles to render from the atomic counter
-            glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomicCounter);
-            glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &numVerticies);
+            glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, indiciesCounterBuff);
+            glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &numIndicies);
+            std::cout << "Num indicies: " << numIndicies << std::endl;
+
+            GLuint numVerts;
+            glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, vertCounterBuff);
+            glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &numVerts);
+            std::cout << "Num verts: " << numVerts << std::endl;
 
             finishedInvocations = 0;
             glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, finishedInvocationsCounter);
@@ -386,7 +415,8 @@ int main() {
 
         /*std::cout << "Num verticies: " << numVerticies << std::endl;*/
 
-        glDrawArrays(GL_TRIANGLES, 0, numVerticies / 2);
+        //glDrawArrays(GL_TRIANGLES, 0, numVerticies / 2);
+        glDrawArrays(GL_TRIANGLES, 0, numIndicies);
 
         /*cm->Render();*/
 

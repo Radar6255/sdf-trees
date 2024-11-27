@@ -7,20 +7,23 @@ layout(local_size_x = 10, local_size_y = 10, local_size_z = 10) in;
 // Below should be the input for the trees
 // Not sure how big to make this...
 
+layout(binding = 4) uniform atomic_uint outVertIndex;
 layout(binding = 5) uniform atomic_uint outIndex;
 layout(binding = 6) uniform atomic_uint finishedInvocations;
 //layout(std430, binding = 3) buffer outMeta {
 //    writeonly restrict uint numVerticiesOut[];
 //};
 layout(std430, binding = 1) buffer outputIndiciesBuff {
-    writeonly restrict vec3 outIndicies[4000000];
+    writeonly restrict uint outIndicies[4000000];
+};
+layout(std430, binding = 3) buffer outputVerticiesBuff {
+    writeonly restrict vec3 outVerts[1000000];
 };
 layout(std430, binding = 2) buffer inMeta {
     readonly restrict float inData[];
 };
 
-//shared uint outIndex;
-shared vec3 outData[2000];
+//shared vec3 outData[2000];
 shared int indicies[11][11][11];
 
 shared uint currIndex;
@@ -201,9 +204,9 @@ void main() {
         vec3 avgPoint = intersectionsSum * (1.0f / numIntersections);
 
         // TODO Need to add this to the output somewhere
-        uint outIndexCurr = atomicAdd(currIndex, 2);
-        outData[outIndexCurr] = avgPoint + offset;
-        outData[outIndexCurr+1] = normal;
+        uint outIndexCurr = atomicCounterAdd(outVertIndex, 2);
+        outVerts[outIndexCurr] = avgPoint + offset;
+        outVerts[outIndexCurr+1] = normal;
 
         indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z) - 1] = int(outIndexCurr);
     } else {
@@ -248,26 +251,27 @@ void main() {
                         continue;
                     }
 
-                    t = atomicCounterAdd(outIndex, uint(12));
-                    outIndicies[t] = outData[i1];
-                    outIndicies[t+1] = outData[i1+1];
-                    outIndicies[t+2] = outData[i2];
-                    outIndicies[t+3] = outData[i2+1];
-                    outIndicies[t+4] = outData[i3];
-                    outIndicies[t+5] = outData[i3+1];
+                    t = atomicCounterAdd(outIndex, uint(6));
+                    outIndicies[t] = i1;
+                    outIndicies[t+1] = i2;
+                    outIndicies[t+2] = i3;
 
-                    outIndicies[t+6] = outData[i2];
-                    outIndicies[t+7] = outData[i2+1];
-                    outIndicies[t+8] = outData[i3];
-                    outIndicies[t+9] = outData[i3+1];
-                    outIndicies[t+10] = outData[i4];
-                    outIndicies[t+11] = outData[i4+1];
+                    outIndicies[t+3] = i2;
+                    outIndicies[t+4] = i3;
+                    outIndicies[t+5] = i4;
+                    //outIndicies[t] = outData[i1];
+                    //outIndicies[t+1] = outData[i1+1];
+                    //outIndicies[t+2] = outData[i2];
+                    //outIndicies[t+3] = outData[i2+1];
+                    //outIndicies[t+4] = outData[i3];
+                    //outIndicies[t+5] = outData[i3+1];
 
-                    if (int(curIndex.x) < 2 || int(curIndex.y) < 2 || int(curIndex.z) < 2) {
-                        //outIndicies[t+7] = vec3( 1, 1, 1 );
-                        //outIndicies[t+9] = vec3( 1, 1, 1 );
-                        //outIndicies[t+11] = vec3( 1, 1, 1 );
-                    }
+                    //outIndicies[t+6] = outData[i2];
+                    //outIndicies[t+7] = outData[i2+1];
+                    //outIndicies[t+8] = outData[i3];
+                    //outIndicies[t+9] = outData[i3+1];
+                    //outIndicies[t+10] = outData[i4];
+                    //outIndicies[t+11] = outData[i4+1];
 
                 } else if (int(axes[i].y) == 1) {
                     int i1 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
@@ -278,26 +282,28 @@ void main() {
                         continue;
                     }
 
-                    t = atomicCounterAdd(outIndex, uint(12));
-                    outIndicies[t] = outData[i1];
-                    outIndicies[t+1] = outData[i1+1];
-                    outIndicies[t+2] = outData[i2];
-                    outIndicies[t+3] = outData[i2+1];
-                    outIndicies[t+4] = outData[i3];
-                    outIndicies[t+5] = outData[i3+1];
+                    t = atomicCounterAdd(outIndex, uint(6));
+                    outIndicies[t] = i1;
+                    outIndicies[t+1] = i2;
+                    outIndicies[t+2] = i3;
 
-                    outIndicies[t+6] = outData[i2];
-                    outIndicies[t+7] = outData[i2+1];
-                    outIndicies[t+8] = outData[i3];
-                    outIndicies[t+9] = outData[i3+1];
-                    outIndicies[t+10] = outData[i4];
-                    outIndicies[t+11] = outData[i4+1];
+                    outIndicies[t+3] = i2;
+                    outIndicies[t+4] = i3;
+                    outIndicies[t+5] = i4;
+                    //t = atomicCounterAdd(outIndex, uint(12));
+                    //outIndicies[t] = outData[i1];
+                    //outIndicies[t+1] = outData[i1+1];
+                    //outIndicies[t+2] = outData[i2];
+                    //outIndicies[t+3] = outData[i2+1];
+                    //outIndicies[t+4] = outData[i3];
+                    //outIndicies[t+5] = outData[i3+1];
 
-                    if (int(curIndex.x) < 2 || int(curIndex.y) < 2 || int(curIndex.z) < 2) {
-                        //outIndicies[t+7] = vec3( 1, 1, 1 );
-                        //outIndicies[t+9] = vec3( 1, 1, 1 );
-                        //outIndicies[t+11] = vec3( 1, 1, 1 );
-                    }
+                    //outIndicies[t+6] = outData[i2];
+                    //outIndicies[t+7] = outData[i2+1];
+                    //outIndicies[t+8] = outData[i3];
+                    //outIndicies[t+9] = outData[i3+1];
+                    //outIndicies[t+10] = outData[i4];
+                    //outIndicies[t+11] = outData[i4+1];
                 } else if (int(axes[i].z) == 1) {
                     int i1 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
                     int i2 = indicies[int(curIndex.x)][int(curIndex.y) - 1][int(curIndex.z)];
@@ -307,26 +313,28 @@ void main() {
                         continue;
                     }
 
-                    t = atomicCounterAdd(outIndex, uint(12));
-                    outIndicies[t] = outData[i1];
-                    outIndicies[t+1] = outData[i1+1];
-                    outIndicies[t+2] = outData[i2];
-                    outIndicies[t+3] = outData[i2+1];
-                    outIndicies[t+4] = outData[i3];
-                    outIndicies[t+5] = outData[i3+1];
+                    t = atomicCounterAdd(outIndex, uint(6));
+                    outIndicies[t] = i1;
+                    outIndicies[t+1] = i2;
+                    outIndicies[t+2] = i3;
 
-                    outIndicies[t+6] = outData[i2];
-                    outIndicies[t+7] = outData[i2+1];
-                    outIndicies[t+8] = outData[i3];
-                    outIndicies[t+9] = outData[i3+1];
-                    outIndicies[t+10] = outData[i4];
-                    outIndicies[t+11] = outData[i4+1];
-                    //if (int(curIndex.x) < 2 || int(curIndex.y) < 2 || int(curIndex.z) < 2) {
-                    if (gl_WorkGroupID.y > 4) {
-                        //outIndicies[t+7] = vec3( 1, 1, 1 );
-                        //outIndicies[t+9] = vec3( 1, 1, 1 );
-                        //outIndicies[t+11] = vec3( 1, 1, 1 );
-                    }
+                    outIndicies[t+3] = i2;
+                    outIndicies[t+4] = i3;
+                    outIndicies[t+5] = i4;
+                    //t = atomicCounterAdd(outIndex, uint(12));
+                    //outIndicies[t] = outData[i1];
+                    //outIndicies[t+1] = outData[i1+1];
+                    //outIndicies[t+2] = outData[i2];
+                    //outIndicies[t+3] = outData[i2+1];
+                    //outIndicies[t+4] = outData[i3];
+                    //outIndicies[t+5] = outData[i3+1];
+
+                    //outIndicies[t+6] = outData[i2];
+                    //outIndicies[t+7] = outData[i2+1];
+                    //outIndicies[t+8] = outData[i3];
+                    //outIndicies[t+9] = outData[i3+1];
+                    //outIndicies[t+10] = outData[i4];
+                    //outIndicies[t+11] = outData[i4+1];
                 }
             }
         }
