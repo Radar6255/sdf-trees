@@ -1,7 +1,10 @@
 #version 460 core
 // In this shader I want to perform native mesh construction of a SDF
 
-layout(local_size_x = 10, local_size_y = 10, local_size_z = 10) in;
+layout(local_size_x = 8, local_size_y = 16, local_size_z = 8) in;
+int local_x = 8;
+int local_y = 16;
+int local_z = 8;
 
 // Here I need to get any buffers that I want to read/write to
 // Below should be the input for the trees
@@ -9,7 +12,7 @@ layout(local_size_x = 10, local_size_y = 10, local_size_z = 10) in;
 
 layout(binding = 4) uniform atomic_uint outVertIndex;
 layout(binding = 5) uniform atomic_uint outIndex;
-layout(binding = 6) uniform atomic_uint finishedInvocations;
+layout(location = 7) uniform int treeOffset;
 //layout(std430, binding = 3) buffer outMeta {
 //    writeonly restrict uint numVerticiesOut[];
 //};
@@ -24,7 +27,10 @@ layout(std430, binding = 2) buffer inMeta {
 };
 
 //shared vec3 outData[2000];
-shared int indicies[11][11][11];
+shared int indicies[9][17][9];
+shared float sdfValue[9][17][9];
+//shared int indicies[11][11][11];
+//shared float sdfValue[11][11][11];
 
 shared uint currIndex;
 
@@ -64,25 +70,25 @@ float calcSdf(vec3 p) {
     return min;
 }
 
+// This is how many work groups tall a tree is
 int treeHeight = 10;
 
-shared float sdfValue[11][11][11];
 void main() {
     if (gl_LocalInvocationID == vec3(0, 0, 0)) {
         //outIndex = 0;
         currIndex = 0;
     }
     // Here we are finding the details about the tree that I am rendering
-    int treeNum = int(floor(gl_WorkGroupID.y / treeHeight));
+    int treeNum = int(floor(gl_WorkGroupID.y / treeHeight)) + treeOffset;
 
     vec3 curIndex = gl_LocalInvocationID + vec3(1, 1, 1);
     vec3 curPos = gl_GlobalInvocationID;
     //vec3 curPos = gl_GlobalInvocationID - vec3(gl_WorkGroupID.x, gl_WorkGroupID.y, gl_WorkGroupID.z);
 
-    curPos.y = mod(curPos.y, treeHeight * 10);
+    curPos.y = mod(curPos.y, treeHeight * local_y);
     curPos -= vec3(gl_WorkGroupID.x, mod(gl_WorkGroupID.y, treeHeight), gl_WorkGroupID.z);
 
-    vec3 pos = {-0.5, 0, -0.5};
+    vec3 pos = {-5, 0, -5};
     //vec3 pos = {0.0, 0.0, 0.0};
 
     float r = 0.23;
@@ -213,33 +219,22 @@ void main() {
         indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z) - 1] = -1;
     }
 
-    //outData[outIndexCurr] = vec3(outIndexCurr, 0.0, 0.0);
-    //outData[2] = vec3(outIndexCurr, 1.0, 0.0);
-
     // This barrier is to make sure that all threads have finished their completing their indicies
     barrier();
 
     // Getting rid of the threads at the boundaries, they won't have all of the points they need anyways
-    if (gl_LocalInvocationID.x == 9 || gl_LocalInvocationID.y == 9 || gl_LocalInvocationID.z == 9) {
-        atomicCounterAdd(finishedInvocations, 1);
+    if (gl_LocalInvocationID.x == local_x - 1 || gl_LocalInvocationID.y == local_y - 1 || gl_LocalInvocationID.z == local_z - 1) {
         return;
     }
 
     if (indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)] != -1) {
-        //vec3 p1 = gl_LocalInvocationID * def + pos;
-        //float d1 = sdVerticalCapsule(p1, 1, 0.4);
         float d1 = sdfValue[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
 
         for (int i = 0; i < 3; i++) {
-            //vec3 p2 = (gl_LocalInvocationID + axes[i]) * def + pos;
             vec3 axisA = curIndex + axes[i];
             float d2 = sdfValue[int(axisA.x)][int(axisA.y)][int(axisA.z)];
 
             if ((d1 >= 0 && d2 < 0) || (d1 < 0 && d2 >= 0)) {
-                //uint t = atomicCounterAdd(outIndex, uint(3));
-                //outIndicies[t] = gl_LocalInvocationID * def + pos;
-                //outIndicies[t+1] = (gl_LocalInvocationID - vec3(0, 1, 0)) * def + pos;
-                //outIndicies[t+2] = (gl_LocalInvocationID - vec3(0, 0, 1)) * def + pos;
                 uint t;
 
                 if (int(axes[i].x) == 1) {
@@ -340,5 +335,4 @@ void main() {
         }
     }
 
-    atomicCounterAdd(finishedInvocations, 1);
 }

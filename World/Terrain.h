@@ -33,29 +33,48 @@ public:
 
 class Terrain {
 public:
-    Terrain(GameState* state, int startX, int startY, int width, int length);
+    Terrain(GameState* state, Shaders* shaders, int startX, int startY, int width, int length);
     void Render(Shaders* shaders);
     void Update();
     void UpdateTerrain();
     void setUpdateSize(float alter);
+    void TreeGeneration(Shaders* shaders, int iter, int iterMax);
+
     float alterSize = 0.005f;
     float treeChanceThresh = 0.4f;
 private:
+    Shaders* shaders;
+
     unsigned long terrainHeightMapSize;
     unsigned long arrayLength;
 
     int startX, startY, width, length;
     GLuint VAO;
     GLuint EBO;
+
+
     Vertex *terrainHeightMap;
     /*Vertex terrainHeightMap[NUM_POINTS];*/
     GLuint *buffers;
     float alter;
     GameState* state;
+
+    // Tree stuff
+    GLuint treeDataBuff;
+    GLuint treeIndiciesBuff;
+    GLuint treeVerticiesBuff;
+    GLuint treeIndiciesCounterBuff;
+    GLuint treeVerticiesCounterBuff;
+
+    GLuint treeVao;
+
     CustomModel* tree;
     std::vector<CustomModel*> trees;
 
     std::vector<TreeDetails> treeList;
+    std::vector<float> treeDetails;
+    uint treeCount;
 
     float generateTree(int x, int curY, int i, float alter, noise::module::Perlin perlinNoise);
+    void TreeInit();
 };

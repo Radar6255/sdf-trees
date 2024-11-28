@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include "Terrain.h"
 #include "CustomModel.h"
+#include "Tree.h"
 #include "Vertex.h"
 
 
@@ -42,46 +43,12 @@ uint* generateIndicies(uint *out, int width, int length) {
         i++;
     }
 
-    /*// Doing the first row*/
-    /*int i = 0;*/
-    /*for (int x = 0; x < length * 2; x++) {*/
-    /*    out[i] = i;*/
-    /*    i++;*/
-    /*}*/
-    /**/
-    /*// TODO Combine second and third and beyond cases*/
-    /*// Doing the second row*/
-    /*int lastPoint = width * 2 - 1;*/
-    /*int newPoint = width * 2;*/
-    /*for (int x = 0; x < width; x++) {*/
-    /*    out[i] = lastPoint;*/
-    /*    i++;*/
-    /*    out[i] = newPoint;*/
-    /**/
-    /*    i++;*/
-    /*    newPoint++;*/
-    /*    lastPoint -= 2;*/
-    /*}*/
-    /**/
-    /*// Third row and beyond should be the same*/
-    /*for (int y = 0; y < length - 2; y++) {*/
-    /*    lastPoint = newPoint - 1;*/
-    /*    for (int x = 0; x < width; x++) {*/
-    /*        out[i] = lastPoint;*/
-    /*        i++;*/
-    /*        out[i] = newPoint;*/
-    /*        i++;*/
-    /**/
-    /*        newPoint++;*/
-    /*        lastPoint--;*/
-    /*    }*/
-    /*}*/
-
     return out;
 }
 
 noise::module::Perlin treeNoise;
-Terrain::Terrain(GameState* state, int startX, int startY, int width, int length) {
+Terrain::Terrain(GameState* state, Shaders* shaders, int startX, int startY, int width, int length) {
+    this->shaders = shaders;
     this->startX = startX;
     this->startY = startY;
     this->width = width + 1;
@@ -145,7 +112,66 @@ Terrain::Terrain(GameState* state, int startX, int startY, int width, int length
     // End VAO creation
 
     this->VAO = VAO;
-};
+
+    // Initializing all of the stuff for the trees
+    this->TreeInit();
+}
+
+void Terrain::TreeInit() {
+    uint maxIndicies = 4000000;
+    uint maxVerticies = 1000000;
+
+    glUseProgram(shaders->shaderList[COMP_SHADER]->program);
+
+    glGenBuffers(1, &treeDataBuff);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeDataBuff);
+
+    // TODO Need to see how big I want to make this
+    // Should be able to calculate roughly based off of the number of trees
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * 200000 * 2, NULL, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, treeDataBuff);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    glGenBuffers(1, &treeIndiciesBuff);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeIndiciesBuff);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GLuint) * maxIndicies, NULL, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, treeIndiciesBuff);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    glGenBuffers(1, &treeVerticiesBuff);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeVerticiesBuff);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::vec3) * maxVerticies, NULL, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, treeVerticiesBuff);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+
+    // Setting up counters
+    GLuint zero = 0;
+
+    glGenBuffers(1, &treeIndiciesCounterBuff);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeIndiciesCounterBuff);
+    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &zero, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 5, treeIndiciesCounterBuff);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
+
+    glGenBuffers(1, &treeVerticiesCounterBuff);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeVerticiesCounterBuff);
+    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &zero, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 4, treeVerticiesCounterBuff);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
+
+    glGenVertexArrays(1, &treeVao);
+    glBindVertexArray(treeVao);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeVerticiesBuff);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, treeVerticiesBuff);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeIndiciesBuff);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, treeIndiciesBuff);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    glBindVertexArray(0);
+}
 
 void Terrain::Update() {
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
@@ -157,7 +183,8 @@ void Terrain::setUpdateSize(float alter) {
 }
 
 void Terrain::UpdateTerrain() {
-    std::vector<TreeDetails> treeListNew;
+    uint treeCountCurr = 0;
+    std::vector<float> treeDetailsNew;
     this->alter += this->alterSize;
 
     // Starting by creating the mesh
@@ -235,14 +262,66 @@ void Terrain::UpdateTerrain() {
                 td.xrot = 0.1 * treeNoise.GetValue(STEP * (curX), STEP * curY, 0.1 * alter);
                 td.yrot = 0;
                 td.variation = (int) round(10 * generateTree(curX, curY, i, this->alter, perlinNoise)) % this->trees.size();
-                treeListNew.push_back(td);
+
+                Tree t(50);
+                std::vector<glm::vec3>* branches = t.GetBranches();
+                /*std::cout << "Num branches: " << branches->size() << std::endl;*/
+
+                treeDetailsNew.push_back(branches->size() * 3 + 4);
+                treeDetailsNew.push_back(treeX);
+                treeDetailsNew.push_back(treeHeight);
+                treeDetailsNew.push_back(treeY);
+
+                for (glm::vec3 bPos : *branches) {
+                    treeDetailsNew.push_back(bPos.x);
+                    treeDetailsNew.push_back(bPos.y);
+                    treeDetailsNew.push_back(bPos.z);
+                }
+                treeCountCurr++;
             }
             /*terrainHeightMap[i].Normal.x = 1;*/
             i++;
         }
     }
 
-    treeList = treeListNew;
+    /*treeList = treeListNew;*/
+    // TODO This may need to change
+    // Also this is doing a copy that I should probably avoid
+    /*if (this->treeDetails.size() == 0) {*/
+        this->treeDetails = treeDetailsNew;
+        this->treeCount = treeCountCurr;
+    /*}*/
+}
+
+void Terrain::TreeGeneration(Shaders* shaders, int iter, int iterMax) {
+    glUseProgram(shaders->shaderList[COMP_SHADER]->program);
+    GLuint start = iter * floor(treeCount / iterMax);
+    glUniform1i(7, start);
+
+    if (iter == 0) {
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeDataBuff);
+        glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(float) * treeDetails.size(), treeDetails.data());
+
+        GLuint zero = 0;
+
+        glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeIndiciesCounterBuff);
+        glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &zero);
+
+        glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeVerticiesCounterBuff);
+        glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &zero);
+
+        glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 3, treeVerticiesBuff);
+        glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 1, treeIndiciesBuff);
+    }
+
+    GLuint treeUpdateCount = floor(treeCount / iterMax);
+    if (iter == iterMax - 1) {
+        treeUpdateCount = treeCount - start;
+    }
+
+    /*std::cout << "Dispatching with " << treeUpdateCount << " trees!" << std::endl;*/
+    // Actually dispatching the compute shader
+    glDispatchCompute(5, 10 * treeUpdateCount, 5);
 }
 
 float Terrain::generateTree(int x, int curY, int i, float alter, noise::module::Perlin perlinNoise) {
@@ -272,10 +351,26 @@ void Terrain::Render(Shaders* shaders) {
     /*glDrawArrays(GL_TRIANGLE_STRIP, 0, this->terrainHeightMapSize / sizeof(Vertex));*/
     glDrawElements(GL_TRIANGLE_STRIP, this->arrayLength - this->length, GL_UNSIGNED_INT, nullptr);
 
-    for (TreeDetails td : treeList) {
-        // TODO Need to draw a tree here at a specific point
-        /*std::cout << "Tree: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;*/
-        /*this->trees[td.variation]->Render(program, td.pos, td.xrot, td.yrot);*/
-        this->trees[0]->Render(shaders->shaderList[TREE_SHADER], td.pos, td.xrot, td.yrot);
-    }
+    //for (TreeDetails td : treeList) {
+    //    // TODO Need to draw a tree here at a specific point
+    //    /*std::cout << "Tree: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;*/
+    //    /*this->trees[td.variation]->Render(program, td.pos, td.xrot, td.yrot);*/
+    //    this->trees[0]->Render(shaders->shaderList[TREE_SHADER], td.pos, td.xrot, td.yrot);
+    //}
+
+    // TODO Here I need to render out the trees
+    this->TreeGeneration(shaders, 0, 1);
+
+    glUseProgram(shaders->shaderList[COMP_SHADER]->program);
+    glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+    GLuint numIndicies;
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeIndiciesCounterBuff);
+    glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &numIndicies);
+
+    /*std::cout << "Num indicies " << numIndicies << " trees!" << std::endl;*/
+
+    glUseProgram(shaders->shaderList[TEST_SHADER]->program);
+    glBindVertexArray(treeVao);
+    glDrawArrays(GL_TRIANGLES, 0, numIndicies);
 }

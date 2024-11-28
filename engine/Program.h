@@ -17,6 +17,7 @@ enum {
     TERRAIN_SHADER,
     TREE_SHADER,
     TEST_SHADER,
+    COMP_SHADER,
     NUM_SHADERS
 };
 

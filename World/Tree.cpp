@@ -52,11 +52,13 @@ Tree::Tree(int numPoints) {
         };
         t.reached = false;
 
+
         float x = sqrt(pow(t.pos.x, 2) + pow(t.pos.z, 2));
-        if (0.1 * pow(x, 1.2) > t.pos.z) {
+        if (0.2 * pow(x, 1.2) > t.pos.y) {
             i--;
             continue;
         }
+        /*std::cout << t.pos.x << ", " << t.pos.z << "| Dist: " << x << std::endl;*/
 
         this->leaves.push_back(t);
     }
@@ -72,7 +74,7 @@ std::vector<glm::vec3>* Tree::GetBranches(){
     /*std::vector<glm::vec3> out = new glm::vec3[this->branches.size() * 2];*/
     std::vector<glm::vec3>* out = new std::vector<glm::vec3>(this->branches.size() * 2);
 
-    glm::vec3 offset = {5, 2, 5};
+    glm::vec3 offset = {0, 2, 0};
 
     int i = 0;
     for (Branch* b: this->branches) {

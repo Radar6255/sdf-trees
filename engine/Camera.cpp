@@ -69,7 +69,13 @@ void Camera::Update(GLFWwindow* window) {
     // Setting up perspective matrix
     glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
 
+    int i = 0;
     for (Program* p : this->shaders->shaderList) {
+        if (i == COMP_SHADER) {
+            i++;
+            continue;
+        }
+        i++;
         glUseProgram(p->program);
         glUniformMatrix4fv(this->modelLoc, 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(this->viewLoc, 1, GL_FALSE, glm::value_ptr(view));
