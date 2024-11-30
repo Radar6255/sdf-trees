@@ -120,6 +120,9 @@ Terrain::Terrain(GameState* state, Shaders* shaders, int startX, int startY, int
 void Terrain::TreeInit() {
     uint maxIndicies = 4000000;
     uint maxVerticies = 1000000;
+    currRenderBuffer = 0;
+    treeGenStep = 0;
+    treeUpdate = false;
 
     glUseProgram(shaders->shaderList[COMP_SHADER]->program);
 
@@ -129,45 +132,75 @@ void Terrain::TreeInit() {
     // TODO Need to see how big I want to make this
     // Should be able to calculate roughly based off of the number of trees
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * 200000 * 2, NULL, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, treeDataBuff);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    glGenBuffers(1, &treeIndiciesBuff);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeIndiciesBuff);
+    glGenBuffers(2, treeIndiciesBuff);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeIndiciesBuff[0]);
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GLuint) * maxIndicies, NULL, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, treeIndiciesBuff);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    glGenBuffers(1, &treeVerticiesBuff);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeVerticiesBuff);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeIndiciesBuff[1]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GLuint) * maxIndicies, NULL, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    glGenBuffers(2, treeVerticiesBuff);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeVerticiesBuff[0]);
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::vec3) * maxVerticies, NULL, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, treeVerticiesBuff);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeVerticiesBuff[1]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::vec3) * maxVerticies, NULL, GL_DYNAMIC_DRAW);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 
     // Setting up counters
     GLuint zero = 0;
 
-    glGenBuffers(1, &treeIndiciesCounterBuff);
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeIndiciesCounterBuff);
-    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &zero, GL_DYNAMIC_READ);
-    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 5, treeIndiciesCounterBuff);
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
-
     glGenBuffers(1, &treeVerticiesCounterBuff);
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeVerticiesCounterBuff);
-    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &zero, GL_DYNAMIC_READ);
-    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 4, treeVerticiesCounterBuff);
+    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &zero, GL_DYNAMIC_COPY);
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 
-    glGenVertexArrays(1, &treeVao);
-    glBindVertexArray(treeVao);
+    glGenBuffers(1, &treeIndiciesCounterBuff);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeIndiciesCounterBuff);
+    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &zero, GL_DYNAMIC_COPY);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeVerticiesBuff);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, treeVerticiesBuff);
+    // Here I am setting up VAO stuff
+    glGenVertexArrays(2, compVao);
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeIndiciesBuff);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, treeIndiciesBuff);
+    glBindVertexArray(compVao[0]);
+    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 4, treeVerticiesCounterBuff);
+    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 5, treeIndiciesCounterBuff);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, treeIndiciesBuff[0]);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, treeVerticiesBuff[0]);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, treeDataBuff);
+
+    glBindVertexArray(compVao[1]);
+    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 4, treeVerticiesCounterBuff);
+    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 5, treeIndiciesCounterBuff);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, treeIndiciesBuff[1]);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, treeVerticiesBuff[1]);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, treeDataBuff);
+
+    // Setting up the tree rendering
+    glUseProgram(shaders->shaderList[TEST_SHADER]->program);
+    glGenVertexArrays(2, treeVao);
+    glBindVertexArray(treeVao[0]);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeVerticiesBuff[0]);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, treeVerticiesBuff[0]);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeIndiciesBuff[0]);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, treeIndiciesBuff[0]);
+
+    glBindVertexArray(treeVao[1]);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeVerticiesBuff[1]);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, treeVerticiesBuff[1]);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeIndiciesBuff[1]);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, treeIndiciesBuff[1]);
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindVertexArray(0);
@@ -291,6 +324,13 @@ void Terrain::UpdateTerrain() {
         this->treeDetails = treeDetailsNew;
         this->treeCount = treeCountCurr;
     /*}*/
+
+    if (this->treeCount > 0) {
+        treeUpdate = true;
+
+        // Here we are waiting for the trees to be updated
+        terrainTreeSync.lock();
+    }
 }
 
 void Terrain::TreeGeneration(Shaders* shaders, int iter, int iterMax) {
@@ -298,21 +338,30 @@ void Terrain::TreeGeneration(Shaders* shaders, int iter, int iterMax) {
     GLuint start = iter * floor(treeCount / iterMax);
     glUniform1i(7, start);
 
+    GLuint t = 0;
     if (iter == 0) {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeDataBuff);
         glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(float) * treeDetails.size(), treeDetails.data());
 
         GLuint zero = 0;
-
+        /*std::cout << "Reset to zero" << std::endl;*/
         glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeIndiciesCounterBuff);
         glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &zero);
 
+        glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeIndiciesCounterBuff);
+        glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &t);
+        std::cout << "t: " << t << std::endl;
+
         glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeVerticiesCounterBuff);
         glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &zero);
-
-        glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 3, treeVerticiesBuff);
-        glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 1, treeIndiciesBuff);
     }
+    glBindVertexArray(treeVao[currRenderBuffer + 1 % 2]);
+
+    /*glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 4, treeVerticiesCounterBuff);*/
+    /*glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 5, treeIndiciesCounterBuff);*/
+    /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, treeVerticiesBuff[currRenderBuffer + 1 % 2]);*/
+    /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, treeIndiciesBuff[currRenderBuffer + 1 % 2]);*/
+
 
     GLuint treeUpdateCount = floor(treeCount / iterMax);
     if (iter == iterMax - 1) {
@@ -322,6 +371,15 @@ void Terrain::TreeGeneration(Shaders* shaders, int iter, int iterMax) {
     /*std::cout << "Dispatching with " << treeUpdateCount << " trees!" << std::endl;*/
     // Actually dispatching the compute shader
     glDispatchCompute(5, 10 * treeUpdateCount, 5);
+    glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeIndiciesCounterBuff);
+    glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &t);
+    std::cout << "t: " << t << std::endl;
+
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeVerticiesCounterBuff);
+    glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &t);
+    std::cout << "t: " << t << std::endl;
 }
 
 float Terrain::generateTree(int x, int curY, int i, float alter, noise::module::Perlin perlinNoise) {
@@ -359,18 +417,56 @@ void Terrain::Render(Shaders* shaders) {
     //}
 
     // TODO Here I need to render out the trees
-    this->TreeGeneration(shaders, 0, 1);
+    if (treeUpdate && treeCount > 0) {
+        glUseProgram(shaders->shaderList[COMP_SHADER]->program);
+        if (treeCount < 5) {
+            this->TreeGeneration(shaders, 0, 1);
+            glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-    glUseProgram(shaders->shaderList[COMP_SHADER]->program);
-    glMemoryBarrier(GL_ALL_BARRIER_BITS);
+            GLuint verts;
 
-    GLuint numIndicies;
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeIndiciesCounterBuff);
-    glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &numIndicies);
+            glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeVerticiesCounterBuff);
+            glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &verts);
 
-    /*std::cout << "Num indicies " << numIndicies << " trees!" << std::endl;*/
+            glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeIndiciesCounterBuff);
+            glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &currIndiciesCount);
+
+
+            currRenderBuffer = ++currRenderBuffer % 2;
+            std::cout << "Indicies <5 " << currIndiciesCount << "==" << verts << std::endl;
+
+            treeUpdate = false;
+            // Freeing the terrain generation thread since it is done this frame
+            terrainTreeSync.unlock();
+        } else {
+            this->TreeGeneration(shaders, treeGenStep, 5);
+
+            if (treeGenStep == 4) {
+                glMemoryBarrier(GL_ALL_BARRIER_BITS);
+                glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeIndiciesCounterBuff);
+                glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &currIndiciesCount);
+                std::cout << "Curr indicies " << currIndiciesCount  << std::endl;
+                currRenderBuffer = ++currRenderBuffer % 2;
+
+                treeUpdate = false;
+                // Freeing the terrain generation thread since it is done this frame
+                terrainTreeSync.unlock();
+            }
+
+            treeGenStep = ++treeGenStep % 5;
+        }
+    }
+
+
+    /*GLuint numIndicies;*/
+    /*glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeIndiciesCounterBuff);*/
+    /*glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), );*/
+
+    /*std::cout << "Num " << treeCount << " trees!" << std::endl;*/
+    /*std::cout << "Curr render buffer " << currRenderBuffer << std::endl;*/
 
     glUseProgram(shaders->shaderList[TEST_SHADER]->program);
-    glBindVertexArray(treeVao);
-    glDrawArrays(GL_TRIANGLES, 0, numIndicies);
+    glBindVertexArray(treeVao[currRenderBuffer]);
+    glDrawArrays(GL_TRIANGLES, 0, currIndiciesCount);
+    glBindVertexArray(0);
 }

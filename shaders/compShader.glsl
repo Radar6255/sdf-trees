@@ -13,9 +13,7 @@ int local_z = 8;
 layout(binding = 4) uniform atomic_uint outVertIndex;
 layout(binding = 5) uniform atomic_uint outIndex;
 layout(location = 7) uniform int treeOffset;
-//layout(std430, binding = 3) buffer outMeta {
-//    writeonly restrict uint numVerticiesOut[];
-//};
+
 layout(std430, binding = 1) buffer outputIndiciesBuff {
     writeonly restrict uint outIndicies[4000000];
 };
@@ -31,8 +29,6 @@ shared int indicies[9][17][9];
 shared float sdfValue[9][17][9];
 //shared int indicies[11][11][11];
 //shared float sdfValue[11][11][11];
-
-shared uint currIndex;
 
 // SDF from https://iquilezles.org/articles/distfunctions/
 float sdVerticalCapsule( vec3 p, float h, float r ) {
@@ -74,10 +70,9 @@ float calcSdf(vec3 p) {
 int treeHeight = 10;
 
 void main() {
-    if (gl_LocalInvocationID == vec3(0, 0, 0)) {
-        //outIndex = 0;
-        currIndex = 0;
-    }
+//    if (atomicCounter(outIndex) > 1000000) {
+//        atomicCounterMin(outIndex, 0);
+//    }
     // Here we are finding the details about the tree that I am rendering
     int treeNum = int(floor(gl_WorkGroupID.y / treeHeight)) + treeOffset;
 
@@ -176,10 +171,6 @@ void main() {
     };
 
     // This draws the grid of sample points
-
-    //uint tb = atomicCounterIncrement(outIndex);
-    //outIndicies[tb] = gl_LocalInvocationID * def + pos;
-
     int numIntersections = 0;
     vec3 intersectionsSum = vec3(0.0, 0.0, 0.0);
     vec3 normal = vec3(0.0, 0.0, 0.0);
@@ -242,7 +233,7 @@ void main() {
                     int i2 = indicies[int(curIndex.x)][int(curIndex.y) - 1][int(curIndex.z)];
                     int i3 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z) - 1];
                     int i4 = indicies[int(curIndex.x)][int(curIndex.y) - 1][int(curIndex.z) - 1];
-                    if (i2 == -1 || i3 == -1 || i4 == -1) {
+                    if (i2 < 0 || i3 < 0 || i4 < 0) {
                         continue;
                     }
 
@@ -273,7 +264,7 @@ void main() {
                     int i2 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z) - 1];
                     int i3 = indicies[int(curIndex.x) - 1][int(curIndex.y)][int(curIndex.z)];
                     int i4 = indicies[int(curIndex.x) - 1][int(curIndex.y)][int(curIndex.z) - 1];
-                    if (i2 == -1 || i3 == -1 || i4 == -1) {
+                    if (i2 < 0 || i3 < 0 || i4 < 0) {
                         continue;
                     }
 
@@ -304,7 +295,7 @@ void main() {
                     int i2 = indicies[int(curIndex.x)][int(curIndex.y) - 1][int(curIndex.z)];
                     int i3 = indicies[int(curIndex.x) - 1][int(curIndex.y)][int(curIndex.z)];
                     int i4 = indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z)];
-                    if (i2 == -1 || i3 == -1 || i4 == -1) {
+                    if (i2 < 0 || i3 < 0 || i4 < 0) {
                         continue;
                     }
 
@@ -316,6 +307,10 @@ void main() {
                     outIndicies[t+3] = i2;
                     outIndicies[t+4] = i3;
                     outIndicies[t+5] = i4;
+
+                    if (atomicCounter(outIndex) > 100000) {
+                        outVerts[i1+1] = vec3(1,1,1);
+                    }
                     //t = atomicCounterAdd(outIndex, uint(12));
                     //outIndicies[t] = outData[i1];
                     //outIndicies[t+1] = outData[i1+1];

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CustomModel.h"
+#include <mutex>
 #include <noise/module/perlin.h>
 #include <vector>
 #define TERRAIN_LENGTH 150
@@ -52,6 +53,9 @@ private:
     GLuint VAO;
     GLuint EBO;
 
+    std::mutex terrainTreeSync;
+    bool treeUpdate;
+
 
     Vertex *terrainHeightMap;
     /*Vertex terrainHeightMap[NUM_POINTS];*/
@@ -59,14 +63,20 @@ private:
     float alter;
     GameState* state;
 
+    short currRenderBuffer;
+    short treeGenStep;
+
     // Tree stuff
     GLuint treeDataBuff;
-    GLuint treeIndiciesBuff;
-    GLuint treeVerticiesBuff;
+    GLuint treeIndiciesBuff[2];
+    GLuint treeVerticiesBuff[2];
     GLuint treeIndiciesCounterBuff;
     GLuint treeVerticiesCounterBuff;
 
-    GLuint treeVao;
+    GLuint currIndiciesCount;
+
+    GLuint compVao[2];
+    GLuint treeVao[2];
 
     CustomModel* tree;
     std::vector<CustomModel*> trees;
