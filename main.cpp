@@ -275,7 +275,7 @@ int main() {
 
     GuiData gd;
     gd.alterSize = 0.005;
-    gd.treeChanceThresh = 0.4;
+    gd.treeChanceThresh = 3;
     gd.avgRenderTime = 0;
     gd.updateRate = 0;
     gd.recentRenderTime = 0;
@@ -405,7 +405,6 @@ int main() {
         //glBindVertexArray(vao);
         /*glDrawArrays(GL_POINTS, 0, 4000);*/
 
-        /*std::cout << "Num verticies: " << numVerticies << std::endl;*/
 
         //glDrawArrays(GL_TRIANGLES, 0, numVerticies / 2);
         //glDrawArrays(GL_TRIANGLES, 0, numIndicies);
