@@ -31,6 +31,7 @@ RUN ./vcpkg/vcpkg install
 RUN mkdir src
 COPY World ./src/World
 COPY engine ./src/engine/
+COPY lib ./src/lib/
 
 COPY GameState.h ./src/GameState.h
 COPY UseImGui.h ./src/UseImGui.h
