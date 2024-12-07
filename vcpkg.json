@@ -1,15 +1,18 @@
 {
-	"name": "imguiexample",
-	"version": "1.0",
-	"dependencies": [
-		{
-			"name": "imgui",
-			"features": [ "glfw-binding", "opengl3-binding" ]
-		},
-		"glfw3",
-		"glad",
-        "glm",
-        "libnoise",
-        "assimp"
-	]
+  "name": "imguiexample",
+  "version": "1.0",
+  "dependencies": [
+    "assimp",
+    "glad",
+    "glfw3",
+    "glm",
+    {
+      "name": "imgui",
+      "features": [
+        "glfw-binding",
+        "opengl3-binding"
+      ]
+    },
+    "libnoise"
+  ]
 }

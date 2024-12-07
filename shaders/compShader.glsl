@@ -25,7 +25,7 @@ layout(std430, binding = 2) buffer inMeta {
 };
 
 //shared vec3 outData[2000];
-shared int indicies[9][17][9];
+shared uint indicies[9][17][9];
 shared float sdfValue[9][17][9];
 //shared int indicies[11][11][11];
 //shared float sdfValue[11][11][11];
@@ -205,9 +205,10 @@ void main() {
         outVerts[outIndexCurr] = avgPoint + offset;
         outVerts[outIndexCurr+1] = normal;
 
-        indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z) - 1] = int(outIndexCurr);
+        indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z) - 1] = uint(outIndexCurr);
     } else {
-        indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z) - 1] = -1;
+        // This should be the biggest 32 bit number
+        indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z) - 1] = uint(4294967295);
     }
 
     // This barrier is to make sure that all threads have finished their completing their indicies
@@ -218,7 +219,7 @@ void main() {
         return;
     }
 
-    if (indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)] != -1) {
+    if (indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)] != 4294967295) {
         float d1 = sdfValue[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
 
         for (int i = 0; i < 3; i++) {
@@ -229,11 +230,11 @@ void main() {
                 uint t;
 
                 if (int(axes[i].x) == 1) {
-                    int i1 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
-                    int i2 = indicies[int(curIndex.x)][int(curIndex.y) - 1][int(curIndex.z)];
-                    int i3 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z) - 1];
-                    int i4 = indicies[int(curIndex.x)][int(curIndex.y) - 1][int(curIndex.z) - 1];
-                    if (i2 < 0 || i3 < 0 || i4 < 0) {
+                    uint i1 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
+                    uint i2 = indicies[int(curIndex.x)][int(curIndex.y) - 1][int(curIndex.z)];
+                    uint i3 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z) - 1];
+                    uint i4 = indicies[int(curIndex.x)][int(curIndex.y) - 1][int(curIndex.z) - 1];
+                    if (i2 == 4294967295 || i3 == 4294967295 || i4 == 4294967295) {
                         continue;
                     }
 
@@ -260,11 +261,11 @@ void main() {
                     //outIndicies[t+11] = outData[i4+1];
 
                 } else if (int(axes[i].y) == 1) {
-                    int i1 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
-                    int i2 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z) - 1];
-                    int i3 = indicies[int(curIndex.x) - 1][int(curIndex.y)][int(curIndex.z)];
-                    int i4 = indicies[int(curIndex.x) - 1][int(curIndex.y)][int(curIndex.z) - 1];
-                    if (i2 < 0 || i3 < 0 || i4 < 0) {
+                    uint i1 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
+                    uint i2 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z) - 1];
+                    uint i3 = indicies[int(curIndex.x) - 1][int(curIndex.y)][int(curIndex.z)];
+                    uint i4 = indicies[int(curIndex.x) - 1][int(curIndex.y)][int(curIndex.z) - 1];
+                    if (i2 == 4294967295 || i3 == 4294967295 || i4 == 4294967295) {
                         continue;
                     }
 
@@ -291,11 +292,11 @@ void main() {
                     //outIndicies[t+10] = outData[i4];
                     //outIndicies[t+11] = outData[i4+1];
                 } else if (int(axes[i].z) == 1) {
-                    int i1 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
-                    int i2 = indicies[int(curIndex.x)][int(curIndex.y) - 1][int(curIndex.z)];
-                    int i3 = indicies[int(curIndex.x) - 1][int(curIndex.y)][int(curIndex.z)];
-                    int i4 = indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z)];
-                    if (i2 < 0 || i3 < 0 || i4 < 0) {
+                    uint i1 = indicies[int(curIndex.x)][int(curIndex.y)][int(curIndex.z)];
+                    uint i2 = indicies[int(curIndex.x)][int(curIndex.y) - 1][int(curIndex.z)];
+                    uint i3 = indicies[int(curIndex.x) - 1][int(curIndex.y)][int(curIndex.z)];
+                    uint i4 = indicies[int(curIndex.x) - 1][int(curIndex.y) - 1][int(curIndex.z)];
+                    if (i2 == 4294967295 || i3 == 4294967295 || i4 == 4294967295) {
                         continue;
                     }
 
@@ -308,9 +309,6 @@ void main() {
                     outIndicies[t+4] = i3;
                     outIndicies[t+5] = i4;
 
-                    if (atomicCounter(outIndex) > 100000) {
-                        outVerts[i1+1] = vec3(1,1,1);
-                    }
                     //t = atomicCounterAdd(outIndex, uint(12));
                     //outIndicies[t] = outData[i1];
                     //outIndicies[t+1] = outData[i1+1];

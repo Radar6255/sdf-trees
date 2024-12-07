@@ -74,6 +74,8 @@ private:
     GLuint treeVerticiesCounterBuff;
 
     GLuint currIndiciesCount;
+    GLuint nextIndiciesCount;
+    GLuint nextVerticiesCount;
 
     GLuint compVao[2];
     GLuint treeVao[2];

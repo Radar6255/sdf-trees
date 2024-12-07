@@ -1,5 +1,4 @@
 #include "World/CustomModel.h"
-#include "World/Tree.h"
 #include "glad/glad.h"
 #include "UseImGui.h"
 #include "GLFW/glfw3.h"
@@ -9,17 +8,20 @@
 #include "World/Terrain.h"
 #include "engine/Camera.h"
 #include "GameState.h"
+#include "lib/semaphore.h"
 
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <glm/ext/vector_float3.hpp>
 #include <imgui_impl_glfw.h>
 #include <iostream>
 #include <ostream>
+#include <sys/types.h>
 #include <thread>
-#include <vector>
+
 
 #define RENDER_DATA_BUFFERS 1
 
@@ -32,6 +34,9 @@ MessageCallback( GLenum source,
                  const GLchar* message,
                  const void* userParam )
 {
+    if (type != GL_DEBUG_TYPE_ERROR) {
+        return;
+    }
     fprintf( stderr, "----OpenGL %s message = %s\n",
            ( type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "status" ),
              message );
@@ -121,7 +126,6 @@ int main() {
     Program *treeProgram = new Program("./shaders/treeFragShader.glsl", "./shaders/treeVertShader.glsl");
 
 
-    // START TESTING
     Program *compShaderProg = new Program("./shaders/compShader.glsl");
     Program *testRenderProgram = new Program("./shaders/testFragShader.glsl", "./shaders/testVertShader.glsl");
 
@@ -131,97 +135,20 @@ int main() {
     glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &max);
     std::cout << "Max invocations: " << max << std::endl;
 
-    int numTrees = 100;
-    Tree* trees[numTrees];
+    glGetIntegerv(GL_MAX_COMPUTE_ATOMIC_COUNTERS, &max);
+    std::cout << "Max atomic counters: " << max << std::endl;
 
-    std::vector<float> inDataVec;
-    for (int i = 0; i < numTrees; i++) {
-        trees[i] = new Tree(50);
+    glGetIntegerv(GL_MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS, &max);
+    std::cout << "Max atomic counter buffers: " << max << std::endl;
 
-        std::vector<glm::vec3>* branches = trees[i]->GetBranches();
+    glGetIntegerv(GL_MAX_COMBINED_ATOMIC_COUNTERS, &max);
+    std::cout << "Max combined atomic counters: " << max << std::endl;
 
-        inDataVec.push_back(branches->size() * 3 + 4);
-        inDataVec.push_back(10 * i);
-        inDataVec.push_back(0);
-        inDataVec.push_back(0);
+    glGetIntegerv(GL_MAX_COMBINED_ATOMIC_COUNTER_BUFFERS, &max);
+    std::cout << "Max combined atomic counter buffers: " << max << std::endl;
 
-        for (glm::vec3 bPos : *branches) {
-            inDataVec.push_back(bPos.x);
-            inDataVec.push_back(bPos.y);
-            inDataVec.push_back(bPos.z);
-        }
-    }
-
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-
-    GLuint ssboInData;
-    glGenBuffers(1, &ssboInData);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboInData);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * inDataVec.size() * 2, inDataVec.data(), GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssboInData);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-    uint maxIndicies = 4000000;
-    uint maxVerticies = 1000000;
-
-    GLuint ssboOutIndicies;
-    glGenBuffers(1, &ssboOutIndicies);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOutIndicies);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GLuint) * maxIndicies, NULL, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboOutIndicies);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-    GLuint ssboOutVerticies;
-    glGenBuffers(1, &ssboOutVerticies);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOutVerticies);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::vec3) * maxVerticies, NULL, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssboOutVerticies);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-    GLuint numIndicies = 0;
-
-    GLuint indiciesCounterBuff;
-    GLuint inCounter = 0;
-    glGenBuffers(1, &indiciesCounterBuff);
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, indiciesCounterBuff);
-    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &inCounter, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 5, indiciesCounterBuff);
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
-
-    GLuint vertCounterBuff;
-    glGenBuffers(1, &vertCounterBuff);
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, vertCounterBuff);
-    glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &inCounter, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 4, vertCounterBuff);
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
-
-    std::cout << "Curr invocations: " << 5 * 10 * numTrees * 5 << std::endl;
-    glDispatchCompute(5, 10 * numTrees, 5);
-    /*glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);*/
-
-    glUseProgram(testRenderProgram->program);
-    glBindVertexArray(vao);
-
-    /*glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOut);*/
-    /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboOut);*/
-
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOutVerticies);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboOutVerticies);
-
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOutIndicies);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboOutIndicies);
-
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-    /*glBindBuffer(GL_ARRAY_BUFFER, ssboOut);*/
-    /*glBindBufferBase(GL_ARRAY_BUFFER, 0, ssboOut);*/
-    /*glBindBuffer(GL_ARRAY_BUFFER, 0);*/
-
-    //glEnableVertexAttribArray(0);
-    glBindVertexArray(0);
-    // END TESTING
-
+    /*glGetIntegerv(GL_MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS, &max);*/
+    /*std::cout << "Max atomic counter buffers: " << max << std::endl;*/
 
     Shaders shaders; // = {terrainProgram, treeProgram};
     shaders.shaderList[TERRAIN_SHADER] = terrainProgram;
@@ -238,7 +165,7 @@ int main() {
     int width = 100;
     int length = 100;
 
-    int size = 1;
+    int size = 2;
     int chunkSize = 100;
     int numTerrains = size * size;
 
@@ -274,9 +201,11 @@ int main() {
     double lastShortUpdate = glfwGetTime();
 
     GuiData gd;
+
     gd.alterSize = 0.005;
     gd.treeChanceThresh = 3;
     gd.avgRenderTime = 0;
+    gd.recentUpdateRate = 0;
     gd.updateRate = 0;
     gd.recentRenderTime = 0;
     gd.updateTerrain = true;
@@ -284,91 +213,57 @@ int main() {
     int treeIter = 10;
     uint treeI = 0;
 
+    uint terrainFinishedCounter = 0;
+    semaphore s;
+
+    int i = 0;
+    for (int ti = 0; ti < numTerrains; ti++) {
+        Terrain *t = world[ti];
+
+        t->alterSize = gd.alterSize;
+        t->treeChanceThresh = gd.treeChanceThresh;
+
+        t->Update();
+
+        // Here we are updating the mesh that we made
+        t1[i] = std::thread([&updatedTerrain, &window, &s, t] {
+            /*std::cout << "Starting update..." << std::endl;*/
+            while (!glfwWindowShouldClose(window)) {
+                t->UpdateTerrain();
+                //updatedTerrain++;
+
+                s.acquire();
+            }
+        });
+        i++;
+    }
+
     while (!glfwWindowShouldClose(window)) {
         std::chrono::time_point<std::chrono::high_resolution_clock> startFrame = std::chrono::high_resolution_clock::now();
 
-        if (gd.updateTerrain) {
-            std::vector<float> inDataVec;
-            for (int i = 0; i < numTrees; i++) {
-                //trees[i] = new Tree(50);
-
-                std::vector<glm::vec3>* branches = trees[i]->GetBranches();
-
-                inDataVec.push_back(branches->size() * 3 + 4);
-                inDataVec.push_back(10 * i);
-                inDataVec.push_back(0);
-                inDataVec.push_back(0);
-
-                for (glm::vec3 bPos : *branches) {
-                    inDataVec.push_back(bPos.x);
-                    inDataVec.push_back(bPos.y);
-                    inDataVec.push_back(bPos.z);
-                }
-            }
-
-            glUseProgram(compShaderProg->program);
-            glUniform1i(7, treeI * numTrees / treeIter);
-
-            if (treeI == 0) {
-                glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboInData);
-                glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(float) * inDataVec.size(), inDataVec.data());
-
-                glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboOutIndicies);
-                glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, indiciesCounterBuff);
-                GLuint vertNum = 0;
-                glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &vertNum);
-
-                glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, vertCounterBuff);
-                glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &vertNum);
-            }
-
-            // Actually dispatching the compute shader
-            glDispatchCompute(5, 10 * numTrees / treeIter, 5);
-        }
         if (shortFrameCount == 600) {
             std::cout << "Recent average frame time: " << shortFrameTime / 600 << std::endl;
             shortFrameTime = 0;
             shortFrameCount = 0;
         }
 
-        if (gd.updateTerrain && updatedTerrain == numTerrains) {
-            // TODO Here I want to update the buffer
-            if (iter) {
-                for (std::thread &t: t1) {
-                    t.join();
-                }
-                shortUpdateCount++;
-            }
-
+        if (gd.updateTerrain && s.get_count() == numTerrains) {
             if (shortUpdateCount == 100) {
                 shortUpdateCount = 0;
                 lastShortUpdate = glfwGetTime();
             }
-
-            // This update is to update the buffer
-            /*std::cout << "Updates per second: " << updates / glfwGetTime() << std::endl;*/
-            /*if (frameCount) {*/
-            /*    std::cout << "Avg FrameTime: " << frameTime / frameCount << std::endl;*/
-            /*}*/
-
-            updatedTerrain = 0;
-            int i = 0;
-            for (int ti = 0; ti < size * size; ti++) {
+            for (int ti = 0; ti < numTerrains; ti++) {
                 Terrain *t = world[ti];
 
                 t->alterSize = gd.alterSize;
                 t->treeChanceThresh = gd.treeChanceThresh;
 
                 t->Update();
-
-                // Here we are updating the mesh that we made
-                t1[i] = std::thread([&updatedTerrain, t] {
-                    /*std::cout << "Starting update..." << std::endl;*/
-                    t->UpdateTerrain();
-                    updatedTerrain++;
-                });
-                i++;
             }
+            shortUpdateCount++;
+
+            s.reset();
+
             updates++;
         }
         iter++;
@@ -381,33 +276,6 @@ int main() {
         for (int ti = 0; ti < size * size; ti++) {
             world[ti]->Render(&shaders);
         }
-        // Waiting for compute shader to complete
-        glUseProgram(compShaderProg->program);
-        /*glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);*/
-
-        glMemoryBarrier(GL_ALL_BARRIER_BITS);
-        // Getting the number of triangles to render from the atomic counter
-        glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, indiciesCounterBuff);
-        glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &numIndicies);
-        /*std::cout << "Num indicies: " << numIndicies << std::endl;*/
-
-        GLuint numVerts;
-        glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, vertCounterBuff);
-        glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &numVerts);
-        /*std::cout << "Num verts: " << numVerts << std::endl;*/
-
-        treeI++;
-        if (treeIter == treeI) {
-            treeI = 0;
-        }
-
-        //glUseProgram(testRenderProgram->program);
-        //glBindVertexArray(vao);
-        /*glDrawArrays(GL_POINTS, 0, 4000);*/
-
-
-        //glDrawArrays(GL_TRIANGLES, 0, numVerticies / 2);
-        //glDrawArrays(GL_TRIANGLES, 0, numIndicies);
 
         /*cm->Render();*/
 
@@ -427,6 +295,12 @@ int main() {
         gd.updateRate = updates / glfwGetTime();
         gd.recentUpdateRate = shortUpdateCount / (glfwGetTime() - lastShortUpdate);
     }
+
+    s.reset();
+    for (std::thread &t : t1) {
+        t.join();
+    }
+
     myimgui.Shutdown();
 
     return 0;
