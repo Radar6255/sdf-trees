@@ -169,20 +169,6 @@ void Terrain::TreeInit() {
     // Here I am setting up VAO stuff
     glGenVertexArrays(2, compVao);
 
-    /*glBindVertexArray(compVao[0]);*/
-    /*glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 4, treeVerticiesCounterBuff);*/
-    /*glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 5, treeIndiciesCounterBuff);*/
-    /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, treeIndiciesBuff[0]);*/
-    /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, treeVerticiesBuff[0]);*/
-    /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, treeDataBuff);*/
-
-    /*glBindVertexArray(compVao[1]);*/
-    /*glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 4, treeVerticiesCounterBuff);*/
-    /*glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 5, treeIndiciesCounterBuff);*/
-    /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, treeIndiciesBuff[1]);*/
-    /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, treeVerticiesBuff[1]);*/
-    /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, treeDataBuff);*/
-
     // Setting up the tree rendering
     glUseProgram(shaders->shaderList[TEST_SHADER]->program);
 
@@ -362,12 +348,13 @@ void Terrain::TreeGeneration(Shaders* shaders, int iter, int iterMax) {
 
     // Actually dispatching the compute shader
     glDispatchCompute(5, 10 * treeUpdateCount, 5);
-    /*glMemoryBarrier(GL_ATOMIC_COUNTER_BARRIER_BIT);*/
-    glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-    /*glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeIndiciesCounterBuff);*/
-    /*glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &currIndiciesCount);*/
-    /*std::cout << "Got " << nextIndiciesCount << " indicies" << std::endl;*/
+    if (iter == iterMax - 1) {
+        glMemoryBarrier(GL_ALL_BARRIER_BITS);
+    } else {
+        glMemoryBarrier(GL_ATOMIC_COUNTER_BARRIER_BIT);
+    }
+
     /*uint t = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - startFrame).count();*/
     /*std::cout << "Took " << t << " microseconds" << std::endl;*/
 }
@@ -381,12 +368,6 @@ float Terrain::generateTree(int x, int curY, int i, float alter, noise::module::
         return treeNoise.GetValue(10 * STEP * x, 10 * STEP * curY, alter);
     }
     return 0;
-        // If there in 5 steps the height is higher than current color green
-        /*terrainHeightMap[i].Normal.y = 1.0;*/
-    /*    return true;*/
-    /*}*/
-    /**/
-    /*return false;*/
 }
 
 void Terrain::Render(Shaders* shaders) {
@@ -413,12 +394,6 @@ void Terrain::Render(Shaders* shaders) {
         glUseProgram(shaders->shaderList[COMP_SHADER]->program);
         if (treeCount < 5) {
             this->TreeGeneration(shaders, 0, 1);
-            /*glMemoryBarrier(GL_ALL_BARRIER_BITS);*/
-
-            /*GLuint verts;*/
-            /**/
-            /*glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeVerticiesCounterBuff);*/
-            /*glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &verts);*/
 
             glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeIndiciesCounterBuff);
             glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &currIndiciesCount);
@@ -433,16 +408,6 @@ void Terrain::Render(Shaders* shaders) {
         } else {
             /*std::cout << treeGenStep << " gen step" << std::endl;*/
             this->TreeGeneration(shaders, treeGenStep, 5);
-
-            /*glMemoryBarrier(GL_ALL_BARRIER_BITS);*/
-            /*glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeIndiciesCounterBuff);*/
-            /*glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &nextIndiciesCount);*/
-            /**/
-            /*glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, treeVerticiesCounterBuff);*/
-            /*glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &nextVerticiesCount);*/
-            /**/
-            /*std::cout << startX << ", " << startY << ": Next: " << nextIndiciesCount << std::endl;*/
-            /*std::cout << startX << ", " << startY << ": Next: " << nextVerticiesCount << std::endl;*/
 
             /*if (nextVerticiesCount > 65535) {*/
             /*    std::cout << "VERTICIES LARGE!" << std::endl;*/
@@ -465,9 +430,6 @@ void Terrain::Render(Shaders* shaders) {
             treeGenStep = ++treeGenStep % 5;
         }
     }
-    /*glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);*/
-
-    /*std::cout << startX << ", " << startY << ": " << treeCount << std::endl;*/
 
     if (treeCount) {
         glUseProgram(shaders->shaderList[TEST_SHADER]->program);
@@ -476,11 +438,9 @@ void Terrain::Render(Shaders* shaders) {
         GLuint modelLoc = glGetUniformLocation(shaders->shaderList[TEST_SHADER]->program, "model");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-        std::cout << currIndiciesCount << std::endl;
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, treeVerticiesBuff[currRenderBuffer]);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, treeIndiciesBuff[currRenderBuffer]);
 
-        /*std::cout << "Using vao for draw: " << currRenderBuffer << std::endl;*/
         glDrawArrays(GL_TRIANGLES, 0, currIndiciesCount);
         /*std::cout << "End of terrain!" << std::endl;*/
     }
