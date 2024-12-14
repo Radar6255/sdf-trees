@@ -54,8 +54,8 @@ float calcSdf(vec3 p) {
     float min = 100000;
 
     for (uint i = startPos; i < treeSize + startPos; i += 6) {
-        vec3 a = vec3(inData[i], inData[i + 1], inData[i + 2]);
-        vec3 b = vec3(inData[i + 3], inData[i + 4], inData[i + 5]);
+        vec3 a = vec3(inData[i], inData[i + 1], inData[i + 2]) - offset;
+        vec3 b = vec3(inData[i + 3], inData[i + 4], inData[i + 5]) - offset;
 
         float t = sdCapsule(p, a, b, r);
         if (t < min) {

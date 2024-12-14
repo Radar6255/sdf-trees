@@ -5,6 +5,7 @@
 #include <glm/ext/vector_float3.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
+#include <iterator>
 #include <noise/noise.h>
 #include <sys/types.h>
 #include "Terrain.h"
@@ -70,6 +71,32 @@ Terrain::Terrain(GameState* state, Shaders* shaders, int startX, int startY, int
     this->state =state;
     this->alter = 0.0f;
 
+    // Here we are setting up our spatial hash for the tree leaf points
+    intVec3 dim;
+    dim.x = 100;
+    dim.y = 50;
+    dim.z = 100;
+
+    intVec3 cellDim;
+    cellDim.x = 40;
+    cellDim.y = 20;
+    cellDim.z = 40;
+
+    this->leafPoints = new SpatialHash(dim, cellDim);
+
+    // Now we need to populated all of the points
+    for (int i = 0; i < 1000000; i++) {
+        // Generating random points from 0 - dim in each axis
+        glm::vec3 pos = {
+            dim.x * (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)), 
+            dim.y * (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)),
+            dim.z * (static_cast<float>(rand()) / static_cast<float>(RAND_MAX))
+        };
+
+        this->leafPoints->AddChild(pos);
+    }
+
+    // Then we can update the terrain
     this->UpdateTerrain();
     
     // Start VAO creation, this should happen in the object that we are trying to render
@@ -174,6 +201,7 @@ void Terrain::TreeInit() {
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindVertexArray(0);
+
 }
 
 void Terrain::Update() {
@@ -266,7 +294,16 @@ void Terrain::UpdateTerrain() {
                 td.yrot = 0;
                 td.variation = (int) round(10 * generateTree(curX, curY, i, this->alter, perlinNoise)) % this->trees.size();
 
-                Tree t(50);
+                std::vector<glm::vec3> currTreeLeaves = leafPoints->GetNearPoints(td.pos + glm::vec3(0, 25, 0), 1);
+                if (!currTreeLeaves.size()) {
+                    i++;
+                    continue;
+                }
+                /*std::cout << "Num tree leaves: " << currTreeLeaves.size() << std::endl;*/
+
+
+                /*Tree t(50);*/
+                Tree t(td.pos, currTreeLeaves);
                 std::vector<glm::vec3>* branches = t.GetBranches();
                 /*std::cout << "Num branches: " << branches->size() << std::endl;*/
 
@@ -279,6 +316,7 @@ void Terrain::UpdateTerrain() {
                     treeDetailsNew.push_back(bPos.x);
                     treeDetailsNew.push_back(bPos.y);
                     treeDetailsNew.push_back(bPos.z);
+                    /*std::cout << "Branch pos: (" << bPos.x << ", " << bPos.y << ", " << bPos.z << ")" << std::endl;*/
                 }
                 treeCountCurr++;
             }
@@ -314,7 +352,7 @@ void Terrain::TreeGeneration(Shaders* shaders, int iter, int iterMax) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, treeIndiciesBuff[(currRenderBuffer + 1) % 2]);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, treeVerticiesBuff[(currRenderBuffer + 1) % 2]);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, treeDataBuff);
-    std::cout << "Using buffer for comp: " << (currRenderBuffer + 1) % 2 << std::endl;
+    /*std::cout << "Using buffer for comp: " << (currRenderBuffer + 1) % 2 << std::endl;*/
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, treeDataBuff);
     glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(float) * treeDetails.size(), treeDetails.data());
@@ -342,7 +380,7 @@ void Terrain::TreeGeneration(Shaders* shaders, int iter, int iterMax) {
     if (iter == iterMax - 1) {
         treeUpdateCount = treeCount - start;
     }
-    std::cout << "Updating " << treeUpdateCount << " trees..." << std::endl;
+    /*std::cout << "Updating " << treeUpdateCount << " trees..." << std::endl;*/
 
     /*std::chrono::time_point<std::chrono::high_resolution_clock> startFrame = std::chrono::high_resolution_clock::now();*/
 
@@ -445,4 +483,8 @@ void Terrain::Render(Shaders* shaders) {
         /*std::cout << "End of terrain!" << std::endl;*/
     }
     glPopDebugGroup();
+}
+
+void Terrain::destroy() {
+    terrainTreeSync.unlock();
 }

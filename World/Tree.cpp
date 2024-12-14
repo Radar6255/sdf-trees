@@ -11,8 +11,13 @@ Branch* Branch::newChild() {
     out->root = this->root + this->dir;
     out->dir = glm::normalize(this->forceDirection * (1 / (float) this->directionCount));
     out->parent = this;
-    out->forceDirection = this->dir;
+    out->forceDirection = out->dir;
     out->directionCount = 0;
+
+    /*std::cout << "Parent ("<<this->root.x<<", "<<this->root.y<<", "<<this->root.z<<")"<<std::endl;*/
+    /*std::cout << "New child root ("<<out->root.x<<", "<<out->root.y<<", "<<out->root.z<<")"<<std::endl;*/
+    /*std::cout << "Out dir: ("<<out->dir.x<<", "<<out->dir.y<<", "<<out->dir.z<<")"<<std::endl;*/
+    /*std::cout << "Direction count: "<<this->directionCount<<std::endl;*/
 
     this->children.push_back(out);
     this->reset();
@@ -25,8 +30,37 @@ void Branch::reset() {
     this->forceDirection = this->dir;
 }
 
-float minDist = 3;
-float maxDist = 10;
+float minDist = 2;
+float maxDist = 8;
+
+Tree::Tree(glm::vec3 base, std::vector<glm::vec3> leaves) {
+    // This is the root
+    Branch *out = new Branch();
+
+    out->root = base;
+    // Starting the direction of the tree upwards
+    out->dir = {0, 1, 0};
+    out->forceDirection = out->dir;
+    out->parent = NULL;
+    out->directionCount = 0;
+
+    /*std::cout << "Base Pos: ("<<base.x<<", "<<base.y<<", "<<base.z<<")"<<std::endl;*/
+    this->branches.push_back(out);
+    for (glm::vec3 leafPos: leaves) {
+        Leaf l;
+        l.pos = leafPos - glm::vec3(0, 20, 0);
+        /*std::cout << "Leaf Pos: ("<<l.pos.x<<", "<<l.pos.y<<", "<<l.pos.z<<")"<<std::endl;*/
+        l.reached = false;
+
+        this->leaves.push_back(l);
+    }
+
+    int i = 0;
+    // Growing the whole tree out
+    while(this->Grow() && i < 20) {
+        i++;
+    }
+}
 
 Tree::Tree(int numPoints) {
     // This is the root
@@ -76,11 +110,9 @@ std::vector<glm::vec3>* Tree::GetBranches(){
 
     glm::vec3 offset = {0, 2, 0};
 
-    int i = 0;
     for (Branch* b: this->branches) {
         out->push_back(b->root + offset);
         out->push_back(b->root + b->dir + offset);
-        i += 2;
         /*std::cout << "Branch start: (" << b->root.x << ", " << b->root.y << ", " << b->root.z << ")" << std::endl;*/
         /*std::cout << "Branch end: (" << b->root.x - b->dir.x << ", " << b->root.y - b->dir.y << ", " << b->root.z - b->dir.z << ")" << std::endl;*/
     }
@@ -94,6 +126,8 @@ bool Tree::Grow() {
     for (int l = this->leaves.size() - 1; l >= 0; l--) {
         Branch* closest = NULL;
         float currMinDist = 100000;
+
+        /*std::cout << "Leaf pos: (" << this->leaves[l].pos.x<<", "<<this->leaves[l].pos.y<<", "<<this->leaves[l].pos.z<<")"<<std::endl;*/
 
         for (int b = 0; b < this->branches.size(); b++) {
             float dist = glm::distance(this->branches[b]->root + this->branches[b]->dir, this->leaves[l].pos);
@@ -116,6 +150,13 @@ bool Tree::Grow() {
                 closest = this->branches[b];
                 currMinDist = dist;
             }
+
+            /*if (b > 1) {*/
+            /*    std::cout << "Dist: " << dist << std::endl;*/
+            /*    float dist = glm::distance(this->branches[0]->root + this->branches[0]->dir, this->leaves[l].pos);*/
+            /*    std::cout << "Root Dist: " << dist << std::endl;*/
+            /*    std::cout << "Root Dist: " << currMinDist << std::endl;*/
+            /*}*/
         }
 
         if (!closest) {

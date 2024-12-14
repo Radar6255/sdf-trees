@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CustomModel.h"
+#include "../lib/spatialHash.h"
 #include <mutex>
 #include <noise/module/perlin.h>
 #include <vector>
@@ -40,6 +41,7 @@ public:
     void UpdateTerrain();
     void setUpdateSize(float alter);
     void TreeGeneration(Shaders* shaders, int iter, int iterMax);
+    void destroy();
 
     float alterSize = 0.005f;
     float treeChanceThresh = 0.4f;
@@ -86,6 +88,8 @@ private:
     std::vector<TreeDetails> treeList;
     std::vector<float> treeDetails;
     uint treeCount;
+
+    SpatialHash* leafPoints;
 
     float generateTree(int x, int curY, int i, float alter, noise::module::Perlin perlinNoise);
     void TreeInit();

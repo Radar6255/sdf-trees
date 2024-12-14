@@ -1,4 +1,5 @@
 #include "World/CustomModel.h"
+#include "World/Tree.h"
 #include "glad/glad.h"
 #include "UseImGui.h"
 #include "GLFW/glfw3.h"
@@ -80,6 +81,50 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 
 int main() {
     std::cout << "Starting game!\n";
+
+
+    // BEGIN TESTING
+    intVec3 dim;
+    dim.x = 100;
+    dim.y = 50;
+    dim.z = 100;
+
+    intVec3 cellDim;
+    cellDim.x = 40;
+    cellDim.y = 20;
+    cellDim.z = 40;
+
+    SpatialHash leafPoints(dim, cellDim);
+
+    // Now we need to populated all of the points
+    for (int i = 0; i < 100000; i++) {
+        // Generating random points from 0 - dim in each axis
+        glm::vec3 pos = {
+            dim.x * (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)), 
+            dim.y * (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)),
+            dim.z * (static_cast<float>(rand()) / static_cast<float>(RAND_MAX))
+        };
+
+        leafPoints.AddChild(pos);
+    }
+
+    std::vector<glm::vec3> currTreeLeaves = leafPoints.GetNearPoints(glm::vec3(50, 20, 50), 10);
+    std::cout << "Num tree leaves: " << currTreeLeaves.size() << std::endl;
+
+    for (glm::vec3 lp: currTreeLeaves) {
+        std::cout << "Pos: ("<<lp.x<<", "<<lp.y<<", "<<lp.z<<")"<<std::endl;
+    }
+
+    Tree t(glm::vec3(50, 5, 50), currTreeLeaves);
+
+    std::vector<glm::vec3>* branches = t.GetBranches();
+
+    for (glm::vec3 bPos : *branches) {
+        std::cout << "Branch pos: (" << bPos.x << ", " << bPos.y << ", " << bPos.z << ")" << std::endl;
+    }
+    /*return 0;*/
+    // END TESTING
+
 
     GameState state;
     state.paused = false;
@@ -165,7 +210,7 @@ int main() {
     int width = 100;
     int length = 100;
 
-    int size = 2;
+    int size = 1;
     int chunkSize = 100;
     int numTerrains = size * size;
 
@@ -294,6 +339,12 @@ int main() {
         gd.avgRenderTime = (float) frameTime / frameCount;
         gd.updateRate = updates / glfwGetTime();
         gd.recentUpdateRate = shortUpdateCount / (glfwGetTime() - lastShortUpdate);
+    }
+
+    for (int x = 0; x < size; x++) {
+        for (int y = 0; y < size; y++) {
+            world[x + y * size]->destroy();
+        }
     }
 
     s.reset();
